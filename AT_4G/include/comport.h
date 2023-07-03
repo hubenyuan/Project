@@ -14,6 +14,20 @@
 #ifndef  COMPORT_H
 #define  COMPORT_H
 
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <string.h>
+#include <time.h>
+#include <getopt.h>
+#include <signal.h>
+
 typedef struct comport_tty_s{
     int     fd;//文件描述符
     int     baudrate;//波特率
@@ -34,6 +48,6 @@ int tty_init(comport_tty_t *comport_tty);
 
 int tty_send(comport_tty_t *comport_tty, char *send_buf, int sbuf_len);
 
-int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len);
+int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len, int timeout);
 
 #endif
