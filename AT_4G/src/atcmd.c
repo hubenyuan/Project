@@ -35,7 +35,7 @@ int send_recv_atcmd(comport_tty_t *comport_tty,atcmd_ctx_t *atcmd)
 
     usleep(10000);
 
-    rv = tty_recv(comport_tty,recv_tranfer,sizeof(recv_tranfer),atcmd->resp_timeout);
+    rv = tty_recv(comport_tty,recv_tranfer,sizeof(recv_tranfer));
     if(rv < 0)
     {
         printf("comport_tty port receive AT response failure and rv: %d\n",rv);
