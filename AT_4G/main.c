@@ -26,6 +26,10 @@
 #include <signal.h>
 
 #include "comport.h"
+#include "atcmd.h"
+
+#define    TIMEOUT  2
+
 
 //打印帮助信息
 void print_usage(char *program_name)
@@ -127,6 +131,12 @@ int main(int argc, char *argv[])
         return -3;
     }
 
+	if(check_serial_ready(comport_tty_ptr) < 0)
+	{
+		printf("The serial port is not ready!\n");
+		return -4;
+	}
+
     while(1)
     {
         FD_ZERO(&rdset);//清空文件描述符集合
@@ -168,7 +178,7 @@ int main(int argc, char *argv[])
             {
                 memset(recv_buf, 0, sizeof(recv_buf));
 				//读串口发来的信息
-                if(tty_recv(comport_tty_ptr, recv_buf, sizeof(recv_buf)) < 0)
+                if(tty_recv(comport_tty_ptr, recv_buf, sizeof(recv_buf), TIMEOUT) < 0)
                 {
                     printf("Failed to receive serial port data!\n");
                     rv = -7;
