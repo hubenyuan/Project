@@ -21,26 +21,12 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/select.h>
 
 #include "comport.h"
 
 #define SEND_BUF    128
-
-typedef struct atcmd_ctx_s
-{
-    char        send_at_buf[516];       // send AT command
-    char        succe_at_buf[128];      // expect receive respond 
-    char        use_buf[512];           // need store the contents of the response in the use_buf
-    int         use_len;                // length of use_buf
-    int         resp_timeout;           // respond time timeout     
-}atcmd_ctx_t;
-
-typedef struct gsm_ctx_s
-{
-    int         status;
-    int         sim_signal;
-}gsm_ctx_t;
 
 enum
 {
@@ -61,7 +47,7 @@ enum
 |                                                                        
 |   return: rv: success: == 0  ;  error: < 0                             
 |-----------------------------------------------------------------------*/
-int send_recv_atcmd(comport_tty_t *comport_tty,atcmd_ctx_t *atcmd);
+int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,char *rmsg,int msgsize,int timeout);
 
 
 /*-----------------------------------------------------------------------
@@ -71,7 +57,7 @@ int send_recv_atcmd(comport_tty_t *comport_tty,atcmd_ctx_t *atcmd);
 |                                                                        
 |   return: rv: success: == 0  ;  error: < 0                             
 |-----------------------------------------------------------------------*/
-int check_sim_serial(comport_tty_t *comport_tty,gsm_ctx_t *gsm_ctx);
+int check_sim_serial(comport_tty_t *comport_tty);
 
 
 /*-----------------------------------------------------------------------
@@ -111,17 +97,8 @@ int check_sim_register(comport_tty_t *comport_tty);
 |                                                                           
 |   return: rv: success: == 0  ;  error: < 0                                
 |---------------------------------------------------------------------------*/
-int check_sim_signal(comport_tty_t *comport_tty,gsm_ctx_t *gsm_ctx);
+int check_sim_signal(comport_tty_t *comport_tty);
 
-
-/*--------------------------------------------------------------------------
-|  funtion：Check sms amount of sim cart.                                   
-|                                                                           
-| argument: serial_fd: serial port fd.                                      
-|                                                                           
-|   return: rv: success: == 0  ;  error: < 0                                
-|---------------------------------------------------------------------------*/
-int check_sms_amount(comport_tty_t *comport_tty,int *sms_sum);
 
 #endif   /* ----- #ifndef _ATCMD_H_  ----- */
 
