@@ -11,22 +11,8 @@
  *                 
  ********************************************************************************/
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <termios.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <string.h>
-#include <time.h>
-#include <getopt.h>
-#include <signal.h>
 
 #include "comport.h"
-
 
 //打开串口文件
 int tty_open(comport_tty_t *comport_tty)
@@ -348,7 +334,7 @@ int tty_send(comport_tty_t *comport_tty, char *send_buf, int sbuf_len)
 
 
 //这里不固定接收buffer的大小，因为不同的AT指令返回的字符串大小不一样，如果要查看所有SMS信息的话，就可能很大
-int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len)
+int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len, int timeout)
 {
     int     read_rv = -1;
     int     rv_fd = -1;
@@ -362,12 +348,15 @@ int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len)
         return -1;
     }
     
-    if (comport_tty->timeout)
+    if (timeout)
     {
+		time_out.tv_sec = (time_t)timeout;
+		time_out.tv_usec = 0;
+
         FD_ZERO(&rdset);
         FD_SET(comport_tty->fd, &rdset);
 
-        rv_fd = select(comport_tty->fd + 1, &rdset, NULL, NULL, NULL);
+        rv_fd = select(comport_tty->fd + 1, &rdset, NULL, NULL, &time_out);
         if(rv_fd < 0)
         {
             printf("[tty_recv]Select() listening for file descriptor error: %s!\n", strerror(errno));
@@ -379,7 +368,7 @@ int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len)
             return -3;
         }
     }
-    
+
     read_rv = read(comport_tty->fd, recv_buf, rbuf_len);
     if (read_rv <= 0)
     {
