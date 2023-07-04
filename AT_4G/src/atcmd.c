@@ -61,13 +61,7 @@ int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,cha
     return 0;
 }
 
-/*-----------------------------------------------------------------------
-|  funtion：Check comport_tty port whether already ready.        
-|                                                                        
-| argument: serial_fd: comport_tty port fd.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
+//发送指令为AT,期望收到OK，检测串口能否通信
 int check_serial_ready(comport_tty_t *comport_tty)
 {
     int             rv = 0;
@@ -82,27 +76,21 @@ int check_serial_ready(comport_tty_t *comport_tty)
 
     if(rv < 0)
     {
-        printf("send_resp_serial() of %s failure and rv: %d\n",__func__,rv);
+        printf("send_resp_serial() of failure and rv: %d\n",rv);
         return -2;
     }
 
     return 0;
 }
 
-/*-----------------------------------------------------------------------
-|  funtion：Check sim cart whether already exist.                        
-|                                                                        
-| argument: serial_fd: comport_tty port fd.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
+//发送指令为AT+CPIN?,期望收到READY,检测SIM卡是否安装，
 int check_sim_exist(comport_tty_t *comport_tty)
 {
     int             rv = 0;
 
     if(!comport_tty)
     {
-        printf("%s,Invalid input arguments\n",__func__);
+        printf("exit Invalid input arguments\n");
         return -1;
     }
 
@@ -117,13 +105,7 @@ int check_sim_exist(comport_tty_t *comport_tty)
     return 0;
 }
 
-/*-----------------------------------------------------------------------
-|  funtion：Check sim cart whether already register.                     
-|                                                                        
-| argument: serial_fd: serial port fd.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
+//发送指令为AT+CREG?,期望收到0,1或者0,3.检测SIM卡是否注册上了。
 int check_sim_register(comport_tty_t *comport_tty)
 {
     int             rv1 = 0;
@@ -131,7 +113,7 @@ int check_sim_register(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("%s,Invalid input arguments\n",__func__);
+        printf("register Invalid input arguments\n");
         return -1;
     }
 
@@ -147,13 +129,7 @@ int check_sim_register(comport_tty_t *comport_tty)
     return 0;
 }
 
-/*--------------------------------------------------------------------------
-|  funtion：Check sim cart whether already signal.                          
-|                                                                           
-| argument: serial_fd: serial port fd.                                      
-|                                                                           
-|   return: rv: success: == 0  ;  error: < 0                                
-|---------------------------------------------------------------------------*/
+//发送指令为AT+CSQ,期望收到0~31,99。  0~31为信号强度，若信号强度为99则表示无信号，第二位通常为99
 int check_sim_signal(comport_tty_t *comport_tty)
 {
     int             i = 0;
@@ -164,7 +140,7 @@ int check_sim_signal(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("%s,Invalid input arguments\n",__func__);
+        printf(" signal Invalid input arguments\n");
         return -1;
     }
 
@@ -173,7 +149,7 @@ int check_sim_signal(comport_tty_t *comport_tty)
     
 	if(rv < 0) 
     {
-        printf("send_resp_serial() of %s failure and rv: %d\n",__func__,rv);
+        printf("send_resp_serial() of failure and rv: %d\n",rv);
         return -2;
     }
 
