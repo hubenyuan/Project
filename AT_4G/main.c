@@ -131,10 +131,22 @@ int main(int argc, char *argv[])
         return -3;
     }
 
-	if(check_serial_ready(comport_tty_ptr) < 0)
+	if(check_sim_ready(comport_tty_ptr) < 0)
 	{
 		printf("The serial port is not ready!\n");
 		return -4;
+	}
+
+	if(check_serial_state(comport_tty_ptr) < 0)
+	{
+		printf("Check signal failure!\n");
+		return -5;
+	}
+
+	if(check_sim_signal(comport_tty_ptr) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -6;
 	}
 
     while(1)
