@@ -50,6 +50,8 @@ int check_sim_register(comport_tty_t *comport_tty);
 
 int check_sim_signal(comport_tty_t *comport_tty);
 
+int check_sim_all(comport_tty_t *comport_tty);
+
 
 #endif   /* ----- #ifndef _ATCMD_H_  ----- */
 
