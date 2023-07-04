@@ -55,10 +55,7 @@ int main(int argc, char *argv[])
     char            send_buf[128];
     char            recv_buf[128];
     fd_set          rdset;
-    comport_tty_t   comport_tty;
-    comport_tty_t  *comport_tty_ptr;
-    comport_tty_ptr = &comport_tty;
-
+    comport_tty_t  *comport_tty;
 
     struct option opts[] = {
         {"baudrate", required_argument, NULL, 'b'},
@@ -76,27 +73,27 @@ int main(int argc, char *argv[])
         {
             case 'b':
             {
-                comport_tty_ptr->baudrate = atoi(optarg);
+                comport_tty->baudrate = atoi(optarg);
                 break;
             }
             case 'd':
             {
-                comport_tty_ptr->databits = atoi(optarg);
+                comport_tty->databits = atoi(optarg);
                 break;
             }
             case 'p':
             {
-                comport_tty_ptr->parity = optarg[0];
+                comport_tty->parity = optarg[0];
                 break;
             }
             case 's':
             {
-                comport_tty_ptr->stopbits = atoi(optarg);
+                comport_tty->stopbits = atoi(optarg);
                 break;
             }
             case 'm':
             {
-                strncpy(comport_tty_ptr->serial_name, optarg, 64);
+                strncpy(comport_tty->serial_name, optarg, 64);
                 break;
             }
             case 'h':
@@ -112,50 +109,38 @@ int main(int argc, char *argv[])
         }
     }
 
-    if(0 == strlen(comport_tty_ptr->serial_name))
+    if(0 == strlen(comport_tty->serial_name))
     {
         printf("Failed to obtain the device name!\n");
         return -1;
     }
 
 
-    if(tty_open(comport_tty_ptr) < 0)
+    if(tty_open(comport_tty) < 0)
     {
         printf("Failed to open the device file");
         return -2;
     }
 
-    if(tty_init(comport_tty_ptr) < 0)
+    if(tty_init(comport_tty) < 0)
     {
         printf("Failed to initialize the serial port\n");
         return -3;
     }
 
-	if(check_sim_ready(comport_tty_ptr) < 0)
+	if(check_sim_all(comport_tty) < 0)
 	{
-		printf("The serial port is not ready!\n");
-		return -4;
-	}
-
-	if(check_serial_state(comport_tty_ptr) < 0)
-	{
-		printf("Check signal failure!\n");
-		return -5;
-	}
-
-	if(check_sim_signal(comport_tty_ptr) < 0)
-	{
-		printf("Can not check signal!\n");
+		printf(" SIM Stats Problem!\n");
 		return -6;
 	}
 
     while(1)
     {
         FD_ZERO(&rdset);//清空文件描述符集合
-        FD_SET(comport_tty_ptr->fd, &rdset);//将串口文件fd加入集合
+        FD_SET(comport_tty->fd, &rdset);//将串口文件fd加入集合
         FD_SET(STDIN_FILENO, &rdset);//将标准输入文件fd加入集合
 		//select多路复用非阻塞监听文件描述符
-        rv_fd = select(comport_tty_ptr->fd + 1, &rdset, NULL, NULL, NULL);
+        rv_fd = select(comport_tty->fd + 1, &rdset, NULL, NULL, NULL);
         if(rv_fd < 0)
         {
             printf("Select listening for file descriptor error: %s\n",strerror(errno));
@@ -177,7 +162,7 @@ int main(int argc, char *argv[])
                 fgets(send_buf, sizeof(send_buf), stdin);
                 i = strlen(send_buf);
                 strcpy(&send_buf[i-1], "\r");//发送AT指令时，需要在指令后面加上\r
-                if(tty_send(comport_tty_ptr, send_buf, strlen(send_buf)) < 0)
+                if(tty_send(comport_tty, send_buf, strlen(send_buf)) < 0)
                 {
                     printf("Failed to send data through the serial port\n");
                     rv = -6;
@@ -186,11 +171,11 @@ int main(int argc, char *argv[])
                 printf("Succeeded in send data serial port data:%s\n", send_buf);
                 fflush(stdin);//冲洗输入流
             }
-            else if(FD_ISSET(comport_tty_ptr->fd, &rdset))//判断是否是串口文件描述符响应
+            else if(FD_ISSET(comport_tty->fd, &rdset))//判断是否是串口文件描述符响应
             {
                 memset(recv_buf, 0, sizeof(recv_buf));
 				//读串口发来的信息
-                if(tty_recv(comport_tty_ptr, recv_buf, sizeof(recv_buf), TIMEOUT) < 0)
+                if(tty_recv(comport_tty, recv_buf, sizeof(recv_buf), TIMEOUT) < 0)
                 {
                     printf("Failed to receive serial port data!\n");
                     rv = -7;
@@ -204,7 +189,7 @@ int main(int argc, char *argv[])
 
     return 0;
 CleanUp: 
-    tty_close(comport_tty_ptr);
+    tty_close(comport_tty);
     return rv;
 }
 
