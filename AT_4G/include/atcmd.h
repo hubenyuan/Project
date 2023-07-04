@@ -38,65 +38,16 @@ enum
     GSM_STATUS_READY = GSM_STATUS_SIM_SIG,  //SIM card and serial port all ready.
 };
 
-
-/*-----------------------------------------------------------------------
-|  funtion：AT command send and receive respond.                                          
-|                                                                        
-| argument: serial: serial port property struct.                                
-|           2、atcmd: send at command relevant parameters struct.        
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
 int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,char *rmsg,int msgsize,int timeout);
 
+int check_sim_ready(comport_tty_t *comport_tty);
 
-/*-----------------------------------------------------------------------
-|  funtion：Check sim card and serial port whether already ready.        
-|                                                                        
-| argument: serial: serial port property struct.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
-int check_sim_serial(comport_tty_t *comport_tty);
+int check_serial_state(comport_tty_t *comport_tty);
 
-
-/*-----------------------------------------------------------------------
-|  funtion：Check serial port whether already ready.        
-|                                                                        
-| argument: serial_fd: serial port fd.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
-int check_serial_ready(comport_tty_t *comport_tty);
-
-
-/*-----------------------------------------------------------------------
-|  funtion：Check sim cart whether already exist.                        
-|                                                                        
-| argument: serial_fd: serial port fd.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
 int check_sim_exist(comport_tty_t *comport_tty);
 
-
-/*-----------------------------------------------------------------------
-|  funtion：Check sim cart whether already register.                     
-|                                                                        
-| argument: serial_fd: serial port fd.                                   
-|                                                                        
-|   return: rv: success: == 0  ;  error: < 0                             
-|-----------------------------------------------------------------------*/
 int check_sim_register(comport_tty_t *comport_tty);
 
-
-/*--------------------------------------------------------------------------
-|  funtion：Check sim cart whether already signal.                          
-|                                                                           
-| argument: serial_fd: serial port fd.                                      
-|                                                                           
-|   return: rv: success: == 0  ;  error: < 0                                
-|---------------------------------------------------------------------------*/
 int check_sim_signal(comport_tty_t *comport_tty);
 
 
