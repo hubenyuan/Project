@@ -62,7 +62,7 @@ int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,cha
 }
 
 //发送指令为AT,期望收到OK，检测串口能否通信
-int check_serial_ready(comport_tty_t *comport_tty)
+int check_sim_ready(comport_tty_t *comport_tty)
 {
     int             rv = 0;
 
@@ -81,6 +81,27 @@ int check_serial_ready(comport_tty_t *comport_tty)
     }
 
     return 0;
+}
+
+//网络信号连接状态
+int check_serial_state(comport_tty_t *comport_tty)
+{
+	int             rv = 0;
+	if(!comport_tty)
+	{
+		printf("check_serial_state Invalid input arguments\n");
+		return -1;
+	}
+
+	rv = send_recv_atcmd(comport_tty,"AT+CSCON=0\r","OK",NULL,0,2);
+
+	if(rv < 0)
+	{
+		printf("send_resp_serial() of failure and rv: %d\n",rv);
+		return -2;
+	}
+
+	return 0;
 }
 
 //发送指令为AT+CPIN?,期望收到READY,检测SIM卡是否安装，
