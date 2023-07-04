@@ -9,10 +9,12 @@ Devsn     = /dev/ttyUSB0
 LIBPATH1  = `pwd`/include/
 LIBPATH2  = `pwd`/lib/
 LIBPATH3  = comport
+LIBPATH4  = atcmd
 
 CFLAGS+=-I${LIBPATH1}
 LDFLAGS+=-L${LIBPATH2}
 LDFLAGS+=-l${LIBPATH3}
+LDFLAGS+=-l${LIBPATH4}
 
 CC = gcc
 AR = ar
