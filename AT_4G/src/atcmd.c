@@ -198,4 +198,25 @@ int check_sim_signal(comport_tty_t *comport_tty)
     return 0;
 }
 
+//检测所有发送的指令，若全部满足返回0，否则返回-1，-2···
+int check_sim_all(comport_tty_t *comport_tty)
+{
+	if(check_sim_ready(comport_tty) < 0)
+	{
+		printf("The serial port is not ready!\n");
+		return -1;
+	}
+
+	if(check_serial_state(comport_tty) < 0)
+	{
+		printf("Check signal failure!\n");
+		return -2;
+	}
+
+	if(check_sim_signal(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -3;
+	}
+}
 
