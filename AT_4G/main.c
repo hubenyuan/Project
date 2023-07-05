@@ -129,13 +129,12 @@ int main(int argc, char *argv[])
         printf("Failed to initialize the serial port\n");
         return -3;
     }
-/*
+
 	if(check_sim_all(comport_tty_ptr) < 0)
 	{
 		printf(" SIM Stats Problem!\n");
 		return -6;
 	}
-*/
 
     while(1)
     {
