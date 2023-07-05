@@ -2,12 +2,14 @@
 PREFIX = `pwd`/../
 
 LIBNAME1 = comport
+LIBNAME2 = atcmd
 
 all: static_lib
 
 static_lib:
 	@gcc -c *.c
 	ar -rcs lib${LIBNAME1}.a *.o
+	ar -rcs lib${LIBNAME2}.a *.o
 
 clean:
 	rm -f *.a
