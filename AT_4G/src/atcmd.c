@@ -83,7 +83,30 @@ int check_sim_ready(comport_tty_t *comport_tty)
     return 0;
 }
 
-//网络信号连接状态
+//发送指令AT+CIMI，检查SIM卡是否读卡成功，返回OK表示成功
+int check_sim_cimi(comport_tty_t *comport_tty)
+{
+	int         rv = 0;
+
+	if(!comport_tty)
+	{
+		printf("check_serial_ready Invalid input arguments\n");
+		return -1;
+	}
+
+	rv = send_recv_atcmd(comport_tty,"AT+CIMI\r","OK",NULL,0,2);
+
+	if(rv < 0)
+	{
+		printf("send_resp_serial() of failure and rv: %d\n",rv);
+		return -2;
+	}
+
+	return 0;
+}
+
+
+//发送指令AT+CSCON=0,检查网络信号连接状态，收到OK表示网络连接状态很好
 int check_serial_state(comport_tty_t *comport_tty)
 {
 	int             rv = 0;
@@ -102,6 +125,91 @@ int check_serial_state(comport_tty_t *comport_tty)
 	}
 
 	return 0;
+}
+
+//发送指令AT+CGATT? 回复是1表示已经连上基站
+int check_nbiot_cgatt(comport_tty_t *comport_tty)
+{
+    int             rv = 0;
+    if(!comport_tty)
+    {   
+        printf("check_serial_state Invalid input arguments\n");
+        return -1; 
+    }   
+
+    rv = send_recv_atcmd(comport_tty,"AT+CGATT?\r","1",NULL,0,2);
+
+    if(rv < 0)
+    {   
+        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        return -2; 
+    }   
+
+    return 0;
+}
+
+//送命令AT+CGMI，查看产商
+int check_sim_cgmi(comport_tty_t *comport_tty)
+{
+    int             rv = 0;
+    if(!comport_tty)
+    {   
+        printf("check_serial_state Invalid input arguments\n");
+        return -1; 
+    }   
+
+    rv = send_recv_atcmd(comport_tty,"AT+CGMI\r","",NULL,0,2);
+
+    if(rv < 0)
+    {   
+        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        return -2; 
+    }   
+
+    return 0;
+}
+
+//发送命令AT+CGSN,查看产品序列号
+int check_sim_cgsn(comport_tty_t *comport_tty)
+{
+    int             rv = 0;
+    if(!comport_tty)
+    {   
+        printf("check_serial_state Invalid input arguments\n");
+        return -1; 
+    }   
+
+    rv = send_recv_atcmd(comport_tty,"AT+CGSN\r","",NULL,0,2);
+
+    if(rv < 0)
+    {   
+        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        return -2; 
+    }   
+
+    return 0;
+}
+
+
+//发送命令ATI，获取产家信息，设备型号，固件版本信息
+int check_sim_ati(comport_tty_t *comport_tty)
+{
+    int             rv = 0;
+    if(!comport_tty)
+    {   
+        printf("check_serial_state Invalid input arguments\n");
+        return -1; 
+    }   
+
+    rv = send_recv_atcmd(comport_tty,"ATI\r","",NULL,0,2);
+
+    if(rv < 0)
+    {   
+        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        return -2; 
+    }   
+
+    return 0;
 }
 
 //发送指令为AT+CPIN?,期望收到READY,检测SIM卡是否安装，
@@ -146,6 +254,28 @@ int check_sim_register(comport_tty_t *comport_tty)
         printf("SIM Card is not regsiter\n");
         return -2;
     }
+
+    return 0;
+}
+
+//发送指令AT+CEREG? 回复0,1 表示网络注册成功。
+int check_nbiot_register(comport_tty_t *comport_tty)
+{
+    int             rv = 0;
+
+    if(!comport_tty)
+    {   
+        printf("register Invalid input arguments\n");
+        return -1; 
+    }   
+
+    rv = send_recv_atcmd(comport_tty,"AT+CEREG?\r","0,1",NULL,0,2);
+
+    if(rv < 0) 
+    {   
+        printf("NBIot is not regsiter\n");
+        return -2; 
+    }   
 
     return 0;
 }
@@ -218,5 +348,42 @@ int check_sim_all(comport_tty_t *comport_tty)
 		printf("Can not check signal!\n");
 		return -3;
 	}
+
+	if(check_sim_cimi(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -4;
+	}
+
+	if(check_nbiot_register(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -5;
+	}
+
+	if(check_nbiot_cgatt(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -6;
+	}
+
+	if(check_sim_cgmi(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -7;
+	}
+
+	if(check_sim_cgsn(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -8;
+	}
+
+	if(check_sim_ati(comport_tty) < 0)
+	{
+		printf("Can not check signal!\n");
+		return -9;
+	}
+
 }
 
