@@ -48,7 +48,19 @@ int check_sim_exist(comport_tty_t *comport_tty);
 
 int check_sim_register(comport_tty_t *comport_tty);
 
+int check_nbiot_register(comport_tty_t *comport_tty);
+
+int check_nbiot_cgatt(comport_tty_t *comport_tty);
+
 int check_sim_signal(comport_tty_t *comport_tty);
+
+int check_sim_cimi(comport_tty_t *comport_tty);
+
+int check_sim_cgmi(comport_tty_t *comport_tty);
+
+int check_sim_cgsn(comport_tty_t *comport_tty);
+
+int check_sim_ati(comport_tty_t *comport_tty);
 
 int check_sim_all(comport_tty_t *comport_tty);
 
