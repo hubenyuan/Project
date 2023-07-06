@@ -12,8 +12,8 @@
  ********************************************************************************/
 
 #include <stdlib.h>
-#include "atcmd.h"
 
+#include "atcmd.h"
 #include "comport.h"
 
 
@@ -32,7 +32,7 @@ int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,cha
     rv = tty_send(comport_tty,atcmd,strlen(atcmd));
     if(rv < 0)
     { 
-        printf("Send AT cmd failure and rv: %d\n",rv);
+        printf("Send AT cmd failure!\n");
         return -2;
     }
 
@@ -41,7 +41,7 @@ int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,cha
     rv = tty_recv(comport_tty,temp_msg,sizeof(temp_msg),timeout);
     if(rv < 0)
     {
-        printf("Receive AT response failure and rv: %d\n",rv);
+        printf("Receive AT response failure\n");
         return -3;
     }
 
@@ -68,7 +68,7 @@ int check_sim_ready(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("check_serial_ready Invalid input arguments\n");
+        printf("Invalid input arguments\n");
         return -1;
     }
 
@@ -76,7 +76,7 @@ int check_sim_ready(comport_tty_t *comport_tty)
 
     if(rv < 0)
     {
-        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        printf("Send AT But failure\n");
         return -2;
     }
 
@@ -90,7 +90,7 @@ int check_sim_cimi(comport_tty_t *comport_tty)
 
 	if(!comport_tty)
 	{
-		printf("check_serial_ready Invalid input arguments\n");
+		printf("Invalid input arguments\n");
 		return -1;
 	}
 
@@ -98,7 +98,7 @@ int check_sim_cimi(comport_tty_t *comport_tty)
 
 	if(rv < 0)
 	{
-		printf("send_resp_serial() of failure and rv: %d\n",rv);
+		printf("Send AT+CIMI But failure\n");
 		return -2;
 	}
 
@@ -112,7 +112,7 @@ int check_serial_state(comport_tty_t *comport_tty)
 	int             rv = 0;
 	if(!comport_tty)
 	{
-		printf("check_serial_state Invalid input arguments\n");
+		printf("Invalid input arguments\n");
 		return -1;
 	}
 
@@ -120,7 +120,7 @@ int check_serial_state(comport_tty_t *comport_tty)
 
 	if(rv < 0)
 	{
-		printf("send_resp_serial() of failure and rv: %d\n",rv);
+		printf("Send AT+CSCON=0 But failure\n");
 		return -2;
 	}
 
@@ -133,7 +133,7 @@ int check_nbiot_cgatt(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("check_serial_state Invalid input arguments\n");
+        printf("Invalid input arguments\n");
         return -1; 
     }   
 
@@ -141,7 +141,7 @@ int check_nbiot_cgatt(comport_tty_t *comport_tty)
 
     if(rv < 0)
     {   
-        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        printf("Send AT+CGATT? But failure\n");
         return -2; 
     }   
 
@@ -154,7 +154,7 @@ int check_sim_cgmi(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("check_serial_state Invalid input arguments\n");
+        printf("Invalid input arguments\n");
         return -1; 
     }   
 
@@ -162,7 +162,7 @@ int check_sim_cgmi(comport_tty_t *comport_tty)
 
     if(rv < 0)
     {   
-        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        printf("Send AT+CGMI But failure\n");
         return -2; 
     }   
 
@@ -175,7 +175,7 @@ int check_sim_cgsn(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("check_serial_state Invalid input arguments\n");
+        printf("Invalid input arguments\n");
         return -1; 
     }   
 
@@ -183,7 +183,7 @@ int check_sim_cgsn(comport_tty_t *comport_tty)
 
     if(rv < 0)
     {   
-        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        printf("Send AT+CGSN But failure\n");
         return -2; 
     }   
 
@@ -197,7 +197,7 @@ int check_sim_ati(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("check_serial_state Invalid input arguments\n");
+        printf("Invalid input arguments\n");
         return -1; 
     }   
 
@@ -205,7 +205,7 @@ int check_sim_ati(comport_tty_t *comport_tty)
 
     if(rv < 0)
     {   
-        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        printf("Send ATI But failure\n");
         return -2; 
     }   
 
@@ -219,7 +219,7 @@ int check_sim_exist(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("exit Invalid input arguments\n");
+        printf("Invalid input arguments\n");
         return -1;
     }
 
@@ -227,7 +227,7 @@ int check_sim_exist(comport_tty_t *comport_tty)
     
 	if(rv < 0)
     {
-        printf("send_resp_serial() of %s failure and rv: %d\n",__func__,rv);
+        printf("Send AT+CPIN? But failure\n");
         return -2;
     }
 
@@ -300,7 +300,7 @@ int check_sim_signal(comport_tty_t *comport_tty)
     
 	if(rv < 0) 
     {
-        printf("send_resp_serial() of failure and rv: %d\n",rv);
+        printf("Send AT+CSQ But failiure\n");
         return -2;
     }
 
@@ -339,49 +339,49 @@ int check_sim_all(comport_tty_t *comport_tty)
 
 	if(check_serial_state(comport_tty) < 0)
 	{
-		printf("Check signal failure!\n");
+		printf("Send AT+CSCON=0 But failure!\n");
 		return -2;
 	}
 
 	if(check_sim_signal(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("Send AT+CSQ But failiure!\n");
 		return -3;
 	}
 
 	if(check_sim_cimi(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("Send AT+CIMI But failure!\n");
 		return -4;
 	}
 
 	if(check_nbiot_register(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("NBIot is not regsiter!\n");
 		return -5;
 	}
 
 	if(check_nbiot_cgatt(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("Send AT+CGATT? But failure!\n");
 		return -6;
 	}
 
 	if(check_sim_cgmi(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("Send AT+CGMI But failure!\n");
 		return -7;
 	}
 
 	if(check_sim_cgsn(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("Send AT+CGSN But failure!\n");
 		return -8;
 	}
 
 	if(check_sim_ati(comport_tty) < 0)
 	{
-		printf("Can not check signal!\n");
+		printf("Send ATI But failure!\n");
 		return -9;
 	}
 
