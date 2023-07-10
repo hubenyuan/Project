@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
 
 	if(check_sim_all(comport_tty_ptr) < 0)
 	{
-		printf(" SIM Stats Problem!\n");
-		return -6;
+		printf(" SIM initialize failure!\n");
+		return -4;
 	}
 
     while(1)
