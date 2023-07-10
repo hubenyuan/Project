@@ -1,10 +1,10 @@
 
 APPNAME   = comp
 LIBNAME   = lib
-Baud_rate = 9600
+Baud_rate = 115200
 Parity    = n
 Stopbits  = 1
-Devsn     = /dev/ttyUSB0
+Devsn     = /dev/ttyUSB2
 
 LIBPATH1  = `pwd`/include/
 LIBPATH2  = `pwd`/lib/
