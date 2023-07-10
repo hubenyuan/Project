@@ -337,52 +337,23 @@ int check_sim_all(comport_tty_t *comport_tty)
 		return -1;
 	}
 
-	if(check_serial_state(comport_tty) < 0)
+	if(check_sim_exist(comport_tty) < 0)
 	{
-		printf("Send AT+CSCON=0 But failure!\n");
+		printf("No SIM detected!\n");
 		return -2;
 	}
 
-	if(check_sim_signal(comport_tty) < 0)
+	if(check_sim_register(comport_tty) < 0)
 	{
-		printf("Send AT+CSQ But failiure!\n");
+		printf("SIM is not regsiter!\n");
 		return -3;
 	}
 
-	if(check_sim_cimi(comport_tty) < 0)
-	{
-		printf("Send AT+CIMI But failure!\n");
-		return -4;
-	}
 
-	if(check_nbiot_register(comport_tty) < 0)
-	{
-		printf("NBIot is not regsiter!\n");
-		return -5;
-	}
-
-	if(check_nbiot_cgatt(comport_tty) < 0)
-	{
-		printf("Send AT+CGATT? But failure!\n");
-		return -6;
-	}
-
-	if(check_sim_cgmi(comport_tty) < 0)
+	if(check_sim_signal(comport_tty) < 0)
 	{
 		printf("Send AT+CGMI But failure!\n");
-		return -7;
-	}
-
-	if(check_sim_cgsn(comport_tty) < 0)
-	{
-		printf("Send AT+CGSN But failure!\n");
-		return -8;
-	}
-
-	if(check_sim_ati(comport_tty) < 0)
-	{
-		printf("Send ATI But failure!\n");
-		return -9;
+		return -4;
 	}
 
 }
