@@ -140,8 +140,8 @@ int tty_init(comport_tty_t *comport_tty)
     }
     else
     {
-        cfsetispeed(&new_termios, B9600);//默认波特率
-        cfsetospeed(&new_termios, B9600);
+        cfsetispeed(&new_termios, B115200);//默认波特率
+        cfsetospeed(&new_termios, B115200);
     }
 
     switch (comport_tty->databits)//数据位
