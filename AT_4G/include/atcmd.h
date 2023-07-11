@@ -26,31 +26,15 @@
 
 #include "comport.h"
 
-#define SEND_BUF    128
-
-enum
-{
-    GSM_STATUS_INIT = 0,        //SIM card and serial port initial status.
-    GSM_STATUS_SERIAL_READY,    //Serial port ready.
-    GSM_STATUS_SIM_EXIST,       //SIM card exist.
-    GSM_STATUS_SIM_REG,         //SIM card already register.
-    GSM_STATUS_SIM_SIG,         //SIM card have signal/
-    GSM_STATUS_READY = GSM_STATUS_SIM_SIG,  //SIM card and serial port all ready.
-};
-
 int send_recv_atcmd(comport_tty_t *comport_tty,char *atcmd,char *expect_recv,char *rmsg,int msgsize,int timeout);
 
 int check_sim_ready(comport_tty_t *comport_tty);
-
-int check_serial_state(comport_tty_t *comport_tty);
 
 int check_sim_exist(comport_tty_t *comport_tty);
 
 int check_sim_register(comport_tty_t *comport_tty);
 
-int check_nbiot_register(comport_tty_t *comport_tty);
-
-int check_nbiot_cgatt(comport_tty_t *comport_tty);
+int check_sim_cgatt(comport_tty_t *comport_tty);
 
 int check_sim_signal(comport_tty_t *comport_tty);
 
