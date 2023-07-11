@@ -106,29 +106,8 @@ int check_sim_cimi(comport_tty_t *comport_tty)
 }
 
 
-//发送指令AT+CSCON=0,检查网络信号连接状态，收到OK表示网络连接状态很好
-int check_serial_state(comport_tty_t *comport_tty)
-{
-	int             rv = 0;
-	if(!comport_tty)
-	{
-		printf("Invalid input arguments\n");
-		return -1;
-	}
-
-	rv = send_recv_atcmd(comport_tty,"AT+CSCON=0\r","OK",NULL,0,2);
-
-	if(rv < 0)
-	{
-		printf("Send AT+CSCON=0 But failure\n");
-		return -2;
-	}
-
-	return 0;
-}
-
 //发送指令AT+CGATT? 回复是1表示已经连上基站
-int check_nbiot_cgatt(comport_tty_t *comport_tty)
+int check_sim_cgatt(comport_tty_t *comport_tty)
 {
     int             rv = 0;
     if(!comport_tty)
@@ -258,27 +237,6 @@ int check_sim_register(comport_tty_t *comport_tty)
     return 0;
 }
 
-//发送指令AT+CEREG? 回复0,1 表示网络注册成功。
-int check_nbiot_register(comport_tty_t *comport_tty)
-{
-    int             rv = 0;
-
-    if(!comport_tty)
-    {   
-        printf("register Invalid input arguments\n");
-        return -1; 
-    }   
-
-    rv = send_recv_atcmd(comport_tty,"AT+CEREG?\r","0,1",NULL,0,2);
-
-    if(rv < 0) 
-    {   
-        printf("NBIot is not regsiter\n");
-        return -2; 
-    }   
-
-    return 0;
-}
 
 //发送指令为AT+CSQ,期望收到0~31,99。  0~31为信号强度，若信号强度为99则表示无信号，第二位通常为99
 int check_sim_signal(comport_tty_t *comport_tty)
