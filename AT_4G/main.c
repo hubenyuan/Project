@@ -69,10 +69,10 @@ int main(int argc, char *argv[])
     char            recv_buf[128];
     fd_set          rdset;
 	pid_t           pid;
+	pid     =     fork();
     comport_tty_t   comport_tty;
 	comport_tty_t  *comport_tty_ptr;
 	comport_tty_ptr = &comport_tty;
-	pid  = fork();//创建子进程
 
     struct option opts[] = {
         {"baudrate", required_argument, NULL, 'b'},
@@ -125,6 +125,27 @@ int main(int argc, char *argv[])
             }
         }
     }
+    
+	if(pid < 0)
+	{
+		printf("fork() create child process failure: %s\n", strerror(errno));
+        return -4;
+    }
+
+    if(pid == 0)
+    {
+        //注册信号处理函数
+        signal(SIGUSR1, sigusr1_handler);
+        signal(SIGUSR2, sigusr2_handler);
+        printf("Child process PID[%d] running...\n", getpid());
+        while(1)
+        {
+            sleep(1);
+        }
+    }
+
+	else
+	{
 
     if(0 == strlen(comport_tty_ptr->serial_name))
     {
@@ -151,27 +172,8 @@ int main(int argc, char *argv[])
 		return -4;
 	}
 
-	if(pid < 0)
-	{
-		printf("fork() create child process failure: %s\n", strerror(errno));
-		return -4;
-	}
-
-	if(pid == 0)
-	{
-	    //注册信号处理函数
-		signal(SIGUSR1, sigusr1_handler);
-		signal(SIGUSR2, sigusr2_handler);
-		while(1)
-		{
-			sleep(1);
-		}
-	}
-	else
-	{ 
-		while(1)
-    
-		{
+	while(1)
+    {
         FD_ZERO(&rdset);//清空文件描述符集合
         FD_SET(comport_tty_ptr->fd, &rdset);//将串口文件fd加入集合
         FD_SET(STDIN_FILENO, &rdset);//将标准输入文件fd加入集合
