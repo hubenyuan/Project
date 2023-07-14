@@ -146,84 +146,85 @@ int main(int argc, char *argv[])
 
 	else
 	{
+        printf("Parent process PID[%d] running...\n", getpid());
 
-    if(0 == strlen(comport_tty_ptr->serial_name))
-    {
-        printf("Failed to obtain the device name!\n");
-        return -1;
-    }
+		if(0 == strlen(comport_tty_ptr->serial_name))
+		{
+			printf("Failed to obtain the device name!\n");
+			return -1;
+		}
 
 
-    if(tty_open(comport_tty_ptr) < 0)
-    {
-        printf("Failed to open the device file");
-        return -2;
-    }
+		if(tty_open(comport_tty_ptr) < 0)
+		{
+			printf("Failed to open the device file");
+			return -2;
+		}
 
-    if(tty_init(comport_tty_ptr) < 0)
-    {
-        printf("Failed to initialize the serial port\n");
-        return -3;
-    }
+		if(tty_init(comport_tty_ptr) < 0)
+		{
+			printf("Failed to initialize the serial port\n");
+			return -3;
+		}
 
-	if(check_sim_all(comport_tty_ptr) < 0)
-	{
-		printf(" SIM initialize failure!\n");
-		return -4;
-	}
+		if(check_sim_all(comport_tty_ptr) < 0)
+		{
+			printf(" SIM initialize failure!\n");
+			return -4;
+		}
 
-	while(1)
-    {
-        FD_ZERO(&rdset);//清空文件描述符集合
-        FD_SET(comport_tty_ptr->fd, &rdset);//将串口文件fd加入集合
-        FD_SET(STDIN_FILENO, &rdset);//将标准输入文件fd加入集合
-		//select多路复用非阻塞监听文件描述符
-        rv_fd = select(comport_tty_ptr->fd + 1, &rdset, NULL, NULL, NULL);
-        if(rv_fd < 0)
-        {
-            printf("Select listening for file descriptor error: %s\n",strerror(errno));
-            rv = -4;
-            goto CleanUp;
-        }
-        else if(0 == rv_fd)
-        {
-            printf("Select listening for file descriptor timeout!\n");
-            rv = -5;
-            goto CleanUp;
-        }
-        else
-        {
-            if(FD_ISSET(STDIN_FILENO, &rdset))//判断是否是标准输入响应
-            {
-                memset(send_buf, 0, sizeof(send_buf));//清空buffer
+		while(1)
+		{
+			FD_ZERO(&rdset);//清空文件描述符集合
+			FD_SET(comport_tty_ptr->fd, &rdset);//将串口文件fd加入集合
+			FD_SET(STDIN_FILENO, &rdset);//将标准输入文件fd加入集合
+			//select多路复用非阻塞监听文件描述符
+			rv_fd = select(comport_tty_ptr->fd + 1, &rdset, NULL, NULL, NULL);
+			if(rv_fd < 0)
+			{
+				printf("Select listening for file descriptor error: %s\n",strerror(errno));
+				rv = -4;
+				goto CleanUp;
+			}
+			else if(0 == rv_fd)
+			{
+				printf("Select listening for file descriptor timeout!\n");
+				rv = -5;
+				goto CleanUp;
+			}
+			else
+			{
+				if(FD_ISSET(STDIN_FILENO, &rdset))//判断是否是标准输入响应
+				{
+					memset(send_buf, 0, sizeof(send_buf));//清空buffer
 
-                fgets(send_buf, sizeof(send_buf), stdin);
-                i = strlen(send_buf);
-                strcpy(&send_buf[i-1], "\r");//发送AT指令时，需要在指令后面加上\r
-                if(tty_send(comport_tty_ptr, send_buf, strlen(send_buf)) < 0)
-                {
-                    printf("Failed to send data through the serial port\n");
-                    rv = -6;
-                    goto CleanUp;
-                }
-                printf("Succeeded in send data serial port data:%s\n", send_buf);
-                fflush(stdin);//冲洗输入流
-            }
-            else if(FD_ISSET(comport_tty_ptr->fd, &rdset))//判断是否是串口文件描述符响应
-            {
-                memset(recv_buf, 0, sizeof(recv_buf));
-				//读串口发来的信息
-                if(tty_recv(comport_tty_ptr, recv_buf, sizeof(recv_buf), TIMEOUT) < 0)
-                {
-                    printf("Failed to receive serial port data!\n");
-                    rv = -7;
-                    goto CleanUp;
-                }
-               	printf("Succeeded in receiving serial port data:%s\n", recv_buf);
-                fflush(stdout);//冲洗输出流
-            }
-        }
-    }
+					fgets(send_buf, sizeof(send_buf), stdin);
+					i = strlen(send_buf);
+					strcpy(&send_buf[i-1], "\r");//发送AT指令时，需要在指令后面加上\r
+					if(tty_send(comport_tty_ptr, send_buf, strlen(send_buf)) < 0)
+					{
+						printf("Failed to send data through the serial port\n");
+						rv = -6;
+						goto CleanUp;
+					}
+					printf("Succeeded in send data serial port data:%s\n", send_buf);
+					fflush(stdin);//冲洗输入流
+				}
+				else if(FD_ISSET(comport_tty_ptr->fd, &rdset))//判断是否是串口文件描述符响应
+				{
+					memset(recv_buf, 0, sizeof(recv_buf));
+					//读串口发来的信息
+					if(tty_recv(comport_tty_ptr, recv_buf, sizeof(recv_buf), TIMEOUT) < 0)
+					{
+						printf("Failed to receive serial port data!\n");
+						rv = -7;
+						goto CleanUp;
+					}
+					printf("Succeeded in receiving serial port data:%s\n", recv_buf);
+					fflush(stdout);//冲洗输出流
+				}
+			}
+		}
 	}
 
     return 0;
