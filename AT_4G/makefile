@@ -1,10 +1,10 @@
 
-APPNAME   = comp
+APPNAME   = main
 LIBNAME   = lib
 Baud_rate = 115200
 Parity    = n
 Stopbits  = 1
-Devsn     = /dev/ttyUSB2
+Devsn     = /dev/ttyUSB3
 
 LIBPATH1  = `pwd`/include/
 LIBPATH2  = `pwd`/lib/
@@ -18,7 +18,6 @@ LDFLAGS+=-l${LIBPATH4}
 
 CC = gcc
 AR = ar
-
 
 all:
 	${CC} ${CFLAGS} main.c -o ${APPNAME} ${LDFLAGS}
