@@ -167,10 +167,11 @@ int main(int argc, char *argv[])
 			sleep(1);
 		}
 	}
-	else(pid > 0)
-	{
-    while(1)
-    {
+	else
+	{ 
+		while(1)
+    
+		{
         FD_ZERO(&rdset);//清空文件描述符集合
         FD_SET(comport_tty_ptr->fd, &rdset);//将串口文件fd加入集合
         FD_SET(STDIN_FILENO, &rdset);//将标准输入文件fd加入集合
