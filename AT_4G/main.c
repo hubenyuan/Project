@@ -44,6 +44,19 @@ void print_usage(char *program_name)
 
 }
 
+void sigusr1_handler(int signum)
+{
+    printf("Received SIGUSR1. Starting pppd...\n");
+    system("sudo pppd call rasppp");
+}
+
+void sigusr2_handler(int signum)
+{
+    printf("Received SIGUSR2. Stopping pppd...\n");
+    system("sudo poff rasppp");
+    exit(0);
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -135,6 +148,10 @@ int main(int argc, char *argv[])
 		printf(" SIM initialize failure!\n");
 		return -4;
 	}
+
+	//注册信号处理函数
+	signal(SIGUSR1, sigusr1_handler);
+	signal(SIGUSR2, sigusr2_handler);
 
     while(1)
     {
