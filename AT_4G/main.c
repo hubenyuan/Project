@@ -40,7 +40,7 @@ void print_usage(char *program_name)
     printf("-s[stopbits]:Select stop bit, for example 1 and 2.\n");
     printf("-m[serial_name]:Select device file, for example /dev/ttyUSB0.\n");
     printf("-h[help]:Printing Help Information.\n"); 
-    printf("For example:./SMS -b 115200 -p n -s 1 -m /dev/ttyUSB0 \n\n");
+    printf("For example:./SMS -b 115200 -p n -s 1 -m /dev/ttyUSB3 \n\n");
 
 }
 
@@ -68,9 +68,11 @@ int main(int argc, char *argv[])
     char            send_buf[128];
     char            recv_buf[128];
     fd_set          rdset;
+	pid_t           pid;
     comport_tty_t   comport_tty;
 	comport_tty_t  *comport_tty_ptr;
 	comport_tty_ptr = &comport_tty;
+	pid  = fork();//创建子进程
 
     struct option opts[] = {
         {"baudrate", required_argument, NULL, 'b'},
@@ -149,10 +151,24 @@ int main(int argc, char *argv[])
 		return -4;
 	}
 
-	//注册信号处理函数
-	signal(SIGUSR1, sigusr1_handler);
-	signal(SIGUSR2, sigusr2_handler);
+	if(pid < 0)
+	{
+		printf("fork() create child process failure: %s\n", strerror(errno));
+		return -4;
+	}
 
+	if(pid == 0)
+	{
+	    //注册信号处理函数
+		signal(SIGUSR1, sigusr1_handler);
+		signal(SIGUSR2, sigusr2_handler);
+		while(1)
+		{
+			sleep(1);
+		}
+	}
+	else(pid > 0)
+	{
     while(1)
     {
         FD_ZERO(&rdset);//清空文件描述符集合
@@ -205,6 +221,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+	}
 
     return 0;
 CleanUp: 
