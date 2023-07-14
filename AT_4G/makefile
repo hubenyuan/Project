@@ -1,5 +1,5 @@
 
-APPNAME   = main
+APPNAME   = ppp-4G
 LIBNAME   = lib
 Baud_rate = 115200
 Parity    = n
