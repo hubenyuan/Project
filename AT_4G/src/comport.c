@@ -19,7 +19,7 @@ int tty_open(comport_tty_t *comport_tty)
 {
     if (!comport_tty)
     {
-        printf("The argument invalid!\n");
+        printf("[%s] The argument invalid!\n",__func__);
         return -1;
     }
 
@@ -36,7 +36,7 @@ int tty_open(comport_tty_t *comport_tty)
         return -3;
     }
 
-    printf("Open %s successfully!\n", comport_tty->serial_name);
+    dbg_print("Open %s successfully!\n", comport_tty->serial_name);
     return 0;
 }
 
@@ -44,23 +44,23 @@ int tty_open(comport_tty_t *comport_tty)
 //关闭串口文件
 int tty_close(comport_tty_t *comport_tty)
 {
-    int retval = -1;
+    int rv = -1;
 
     if (!comport_tty)
     {
-        printf("The argument invalid!\n");
+        printf("[%s] The argument invalid!\n",__func__);
         return -1;
     }
 
-    retval = tcflush(comport_tty->fd, TCIOFLUSH);//清空输入输出
-    if (retval < 0)
+    rv = tcflush(comport_tty->fd, TCIOFLUSH);//清空输入输出
+    if (rv < 0)
     {
         printf("Failed to clear the input/output buffer:%s\n", strerror(errno));
         return -2;
     }
     
-    retval = tcsetattr(comport_tty->fd, TCSANOW, &(comport_tty->old_termios));//恢复串口原始属性，TCSANOW:不等数据传输完毕
-    if (retval < 0)
+    rv = tcsetattr(comport_tty->fd, TCSANOW, &(comport_tty->old_termios));//恢复串口原始属性，TCSANOW:不等数据传输完毕
+    if (rv < 0)
     {
         printf("Set old termios failure:%s\n", strerror(errno));
         return -3;
@@ -68,7 +68,7 @@ int tty_close(comport_tty_t *comport_tty)
 
     close(comport_tty->fd);
     
-    printf("Excute tty_close() successfully!\n");
+    dbg_print("Excute [%s] successfully!\n",__func__);
 
     return 0;
 }
@@ -77,28 +77,28 @@ int tty_close(comport_tty_t *comport_tty)
 //初始化串口
 int tty_init(comport_tty_t *comport_tty)
 {
-    int     retval = -1;
+    int     rv = -1;
     char    baudrate_buf[32] = {0};
     struct  termios new_termios;
 
     if (!comport_tty)
     {
-        printf("The argument invalid!\n");
+        printf("[%s] The argument invalid!\n",__func__);
         return -1;
     }
 
     memset(&new_termios, 0, sizeof(new_termios));
     memset(&(comport_tty->old_termios), 0, sizeof(comport_tty->old_termios));
 
-    retval = tcgetattr(comport_tty->fd, &(comport_tty->old_termios));  //获取与终端相关的参数
-    if (retval < 0)
+    rv = tcgetattr(comport_tty->fd, &(comport_tty->old_termios));  //获取与终端相关的参数
+    if (rv < 0)
     {
         printf("Failed to obtain the current serial port properties!\n");
         return -2;
     }
 
-    retval = tcgetattr(comport_tty->fd, &new_termios);
-    if (retval < 0)
+    rv = tcgetattr(comport_tty->fd, &new_termios);
+    if (rv < 0)
     {
         printf("Failed to obtain the current serial port properties!\n");
         return -3;
@@ -244,21 +244,21 @@ int tty_init(comport_tty_t *comport_tty)
 
     comport_tty->msend_len = 128;//最长数据发送长度
 
-    retval = tcflush(comport_tty->fd, TCIOFLUSH);//清空输入输出
-    if (retval < 0)
+    rv = tcflush(comport_tty->fd, TCIOFLUSH);//清空输入输出
+    if (rv < 0)
     {
         printf("Failed to clear the input/output buffer:%s\n", strerror(errno));
         return -3;
     }
 
-    retval = tcsetattr(comport_tty->fd, TCSANOW, &new_termios);//启用新的串口文件属性
-    if(retval < 0)
+    rv = tcsetattr(comport_tty->fd, TCSANOW, &new_termios);//启用新的串口文件属性
+    if(rv < 0)
     {
         printf("Failed to set new properties of the serial port:%s\n", strerror(errno));
         return -4;
     }
 
-    printf("Successfully set new properties of the serial port!\n");
+    dbg_print("Successfully set new properties of the serial port!\n");
     return 0;
 }
 
@@ -266,7 +266,7 @@ int tty_init(comport_tty_t *comport_tty)
 //向串口发送数据
 int tty_send(comport_tty_t *comport_tty, char *send_buf, int sbuf_len)
 {
-    int     retval = -1;
+    int     rv = -1;
     int     write_rv = 0;
     char   *ptr = NULL; 
 	char   *end = NULL;
@@ -274,7 +274,7 @@ int tty_send(comport_tty_t *comport_tty, char *send_buf, int sbuf_len)
 
     if (!comport_tty || !send_buf || (sbuf_len < 0))
     {
-        printf("[tty_send] The argument invalid!\n");
+        printf("[%s] The argument invalid!\n",__func__);
         return -1;
     }
 	
@@ -287,28 +287,28 @@ int tty_send(comport_tty_t *comport_tty, char *send_buf, int sbuf_len)
         {   
             if(comport_tty->msend_len <(end-ptr))
             {
-                retval = write(comport_tty->fd, ptr, comport_tty->msend_len);
+                rv = write(comport_tty->fd, ptr, comport_tty->msend_len);
 
-                if ((retval <= 0) || (retval != comport_tty->msend_len))
+                if ((rv <= 0) || (rv != comport_tty->msend_len))
                 {
-                    printf("[tty_send] Write data to fd[%d] failure:%s\n",comport_tty->fd, strerror(errno));
+                    printf("Write data to fd[%d] failure:%s\n",comport_tty->fd, strerror(errno));
                     return -2;
                 }
 
-                write_rv += retval;
+                write_rv += rv;
                 ptr += comport_tty->msend_len;
             }
             else
             {
-                retval = write(comport_tty->fd, ptr, (end - ptr));
+                rv = write(comport_tty->fd, ptr, (end - ptr));
 
-                if ((retval <= 0) || (retval != (end - ptr)))
+                if ((rv <= 0) || (rv != (end - ptr)))
                 {
-                    printf("[tty_send] Write data to fd[%d] failure:%s\n",comport_tty->fd, strerror(errno));
+                    printf("Write data to fd[%d] failure:%s\n",comport_tty->fd, strerror(errno));
                     return -3;
                 }
 
-                write_rv += retval;
+                write_rv += rv;
                 ptr += (end - ptr);
             }
             
@@ -317,17 +317,17 @@ int tty_send(comport_tty_t *comport_tty, char *send_buf, int sbuf_len)
     }
     else
     {
-        retval = write(comport_tty->fd, send_buf, sbuf_len);
-        if((retval <= 0) || (retval != sbuf_len))
+        rv = write(comport_tty->fd, send_buf, sbuf_len);
+        if((rv <= 0) || (rv != sbuf_len))
         {
             printf("Write data to fd[%d] failure:%s\n",comport_tty->fd, strerror(errno));
             return -4;
         }
-        write_rv += retval;
+        write_rv += rv;
     }
 
-    printf("[tty_send]send_buf:%s\n", send_buf);
-    printf("[tty_send]write_rv: %d\n", write_rv);
+    dbg_print("send_buf:%s\n", send_buf);
+    //dbg_print("write_rv: %d\n", write_rv);
 
     return write_rv;
 }
@@ -344,7 +344,7 @@ int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len, int timeo
 	memset(&time_out, 0,sizeof(time_out)); 
     if (!comport_tty || (rbuf_len < 0))
     {
-        printf("[tty_recv]The argument invalid!\n");
+        printf("[%s] The argument invalid!\n",__func__);
         return -1;
     }
     
@@ -359,12 +359,12 @@ int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len, int timeo
         rv_fd = select(comport_tty->fd + 1, &rdset, NULL, NULL, &time_out);
         if(rv_fd < 0)
         {
-            printf("[tty_recv]Select() listening for file descriptor error: %s!\n", strerror(errno));
+            printf("Select() listening for file descriptor error: %s!\n", strerror(errno));
             return -2;
         }
         else if(rv_fd == 0)
         {
-            printf("[tty_recv]Select() listening for file descriptor timeout!\n");
+            printf("Select() listening for file descriptor timeout!\n");
             return -3;
         }
     }
@@ -372,11 +372,11 @@ int tty_recv(comport_tty_t *comport_tty, char *recv_buf, int rbuf_len, int timeo
     read_rv = read(comport_tty->fd, recv_buf, rbuf_len);
     if (read_rv <= 0)
     {
-        printf("[tty_recv]Read data from fd[%d] failure:%s\n", comport_tty->fd, strerror(errno));
+        printf("Read data from fd[%d] failure:%s\n", comport_tty->fd, strerror(errno));
         return -4;
     }
     
-    printf("[tty_recv]recv_buf:%s\n",recv_buf);
+    dbg_print("recv_buf:%s\n",recv_buf);
     
     return read_rv;
 }
