@@ -7,7 +7,7 @@ LIBNAME2 = atcmd
 all: static_lib
 
 static_lib:
-	@gcc -c *.c
+	@arm-linux-gnueabihf-gcc -c *.c
 	ar -rcs lib${LIBNAME1}.a *.o
 	ar -rcs lib${LIBNAME2}.a *.o
 
