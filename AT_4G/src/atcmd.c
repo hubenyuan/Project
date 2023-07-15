@@ -68,7 +68,7 @@ int check_sim_ready(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1;
     }
 
@@ -90,7 +90,7 @@ int check_sim_cimi(comport_tty_t *comport_tty)
 
 	if(!comport_tty)
 	{
-		printf("Invalid input arguments\n");
+		printf("[%s] Invalid input arguments\n",__func__);
 		return -1;
 	}
 
@@ -112,7 +112,7 @@ int check_sim_cgatt(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1; 
     }   
 
@@ -133,7 +133,7 @@ int check_sim_cgmi(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1; 
     }   
 
@@ -154,7 +154,7 @@ int check_sim_cgsn(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1; 
     }   
 
@@ -176,7 +176,7 @@ int check_sim_ati(comport_tty_t *comport_tty)
     int             rv = 0;
     if(!comport_tty)
     {   
-        printf("Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1; 
     }   
 
@@ -198,7 +198,7 @@ int check_sim_exist(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1;
     }
 
@@ -221,7 +221,7 @@ int check_sim_register(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf("register Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1;
     }
 
@@ -249,7 +249,7 @@ int check_sim_signal(comport_tty_t *comport_tty)
 
     if(!comport_tty)
     {
-        printf(" signal Invalid input arguments\n");
+        printf("[%s] Invalid input arguments\n",__func__);
         return -1;
     }
 
@@ -303,14 +303,14 @@ int check_sim_all(comport_tty_t *comport_tty)
 
 	if(check_sim_register(comport_tty) < 0)
 	{
-		printf("SIM is not regsiter!\n");
+		printf("SIM card has no regsiter!\n");
 		return -3;
 	}
 
 
 	if(check_sim_signal(comport_tty) < 0)
 	{
-		printf("Send AT+CGMI But failure!\n");
+		printf("The SIM card has no signal!\n");
 		return -4;
 	}
 
