@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     char            recv_buf[128];
     fd_set          rdset;
 	pid_t           pid;
-	pid          =  fork();
+	pid          =  fork();  //创建子进程
     comport_tty_t   comport_tty;
 	comport_tty_t  *comport_tty_ptr;
 	comport_tty_ptr = &comport_tty;
