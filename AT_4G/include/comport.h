@@ -28,6 +28,14 @@
 #include <getopt.h>
 #include <signal.h>
 
+#define CONFIG_DEBUG
+
+#ifdef  CONFIG_DEBUG
+#define dbg_print(format, args...) printf(format, ##args)
+#else 
+#define dbg_print(format, args...) do {} while(0)
+#endif
+
 typedef struct comport_tty_s{
     int     fd;//文件描述符
     int     baudrate;//波特率
