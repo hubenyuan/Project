@@ -16,11 +16,11 @@ LDFLAGS+=-L${LIBPATH2}
 LDFLAGS+=-l${LIBPATH3}
 LDFLAGS+=-l${LIBPATH4}
 
-CC = gcc
+CC = arm-linux-gnueabihf-gcc
 AR = ar
 
 all:
-	${CC} ${CFLAGS} main.c -o ${APPNAME} ${LDFLAGS}
+	${CC} main.c -o ${APPNAME} ${CFLAGS} ${LDFLAGS} -static
 
 clean:
 	rm -f ${APPNAME}
