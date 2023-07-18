@@ -36,7 +36,7 @@ int check_sim_register(comport_tty_t *comport_tty);
 
 int check_sim_cgatt(comport_tty_t *comport_tty);
 
-int check_sim_signal(comport_tty_t *comport_tty);
+int check_sim_signal(comport_tty_t *comport_tty,int *sim_signal);
 
 int check_sim_cimi(comport_tty_t *comport_tty);
 
