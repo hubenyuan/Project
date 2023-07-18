@@ -47,20 +47,8 @@ pid_t      fork_pid1,fork_pid2;
 void print_usage(char *program_name);
 void install_signal(void);
 void handler(int sig);
-
-// 信号处理函数，SIGUSR1信号启动pppd拨号，SIGUSR2信号停止pppd拨号
-void sigusr1_handler(int signum)
-{
-    printf("Received SIGUSR1. Starting pppd...\n");
-    system("sudo pppd call rasppp");
-}
-
-void sigusr2_handler(int signum)
-{
-    printf("Received SIGUSR2. Stopping pppd...\n");
-    system("sudo poff rasppp");
-    exit(0);
-}
+void sigusr1_handler(int signum);
+void sigusr2_handler(int signum);
 
 typedef struct 
 {
@@ -324,15 +312,20 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-
-// 如果父进程接收到退出信号（例如SIGINT），则向子进程一和子进程二发送SIGTERM信号
+/*
+  // 如果父进程接收到退出信号（例如SIGINT），则向子进程一和子进程二发送SIGTERM信号
 	if (SIGINT) 
 	{
-		kill(fork_pid1, SIGTERM);
-		kill(fork_pid2, SIGTERM);
+		kill(fork_pid1,SIGTERM);
+		kill(fork_pid2,SIGTERM);
 	}
+*/
+
+	kill(fork_pid1,SIGKILL);  //结束进程一运行
 	waitpid(fork_pid1, NULL, 0);
+	kill(fork_pid2,SIGKILL);
 	waitpid(fork_pid2, NULL, 0);
+
 
     // 解除共享内存的映射
     if (shmdt(data) == -1) 
@@ -365,6 +358,21 @@ void print_usage(char *program_name)
     printf("-h[help]:Printing Help Information.\n"); 
     printf("For example:./SMS -b 115200 -p n -s 1 -m /dev/ttyUSB3 \n\n");
 
+}
+
+
+// 信号处理函数，SIGUSR1信号启动pppd拨号，SIGUSR2信号停止pppd拨号
+void sigusr1_handler(int signum)
+{
+    printf("Received SIGUSR1. Starting pppd...\n");
+    system("sudo pppd call rasppp");
+}
+
+void sigusr2_handler(int signum)
+{
+    printf("Received SIGUSR2. Stopping pppd...\n");
+    system("sudo poff rasppp");
+    exit(0);
 }
 
 
@@ -421,4 +429,5 @@ void install_signal(void)
 
     return ;
 }
+
 
