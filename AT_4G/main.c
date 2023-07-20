@@ -24,9 +24,6 @@
 #include <time.h>
 #include <getopt.h>
 #include <signal.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 
 #include "comport.h"
 #include "atcmd.h"
@@ -42,19 +39,14 @@
 #define    TIMEOUT  2
 
 int g_stop = 0;
-pid_t      fork_pid1,fork_pid2;
+pid_t  fork_pid1;
 
 void print_usage(char *program_name);
-void install_signal(void);
-void handler(int sig);
+void sig_handle(int signum);
 void sigusr1_handler(int signum);
 void sigusr2_handler(int signum);
-void sigusr_parent(int sig); 
+void exit_handler();
 
-typedef struct 
-{
-	int value;
-} shared_data;
 
 int main(int argc, char *argv[])
 {
@@ -67,11 +59,8 @@ int main(int argc, char *argv[])
 	int             serial_fd;
     char            send_buf[128];
     char            recv_buf[128];
-	int             status;
 	int             sim_signal;
-	pid_t           pid;
     fd_set          rdset;
-	shared_data    *data;
     comport_tty_t   comport_tty;
     comport_tty_t  *comport_tty_ptr;
     comport_tty_ptr = &comport_tty;
@@ -134,28 +123,11 @@ int main(int argc, char *argv[])
 		printf("Failed to obtain the device name!\n");
 		return -2;
 	}
-
-	//创建共享内存
-	shmid = shmget(IPC_PRIVATE, sizeof(shared_data), IPC_CREAT | 0666);
-	if(shmid < 0)
-	{
-		printf("Creat failure\n");
-		exit(0);
-	}
-
-	// 将共享内存映射到当前进程的地址空间
-	data = (shared_data *)shmat(shmid, NULL, 0);
-	if(data == (shared_data *)(-1))
-	{
-		printf("shmat");
-		exit(-1);
-	}
-
-	//安装信号
-	install_signal();
-	//父进程收到USR1和USR2信号不处理
-	signal(SIGUSR1, sigusr_parent);
-	signal(SIGUSR2, sigusr_parent);
+	
+	//注册信号
+	signal(SIGINT,sig_handle);
+	signal(SIGTERM,sig_handle);
+	signal(SIGINT,exit_handler);
 
 	//打开串口
 	if(tty_open(comport_tty_ptr) < 0)
@@ -173,7 +145,15 @@ int main(int argc, char *argv[])
 		goto CleanUp;
 	}
 
-    //创建子进程一
+	//检测串口是否打开，SIM卡在不在，有没有注册网络，
+	if(check_sim_all(comport_tty_ptr) < 0)
+	{
+		printf("SIM Card don't get ready\n");
+		return -5;
+		goto CleanUp;
+	}
+
+    //创建子进程
 	fork_pid1 = fork();
 	if(fork_pid1 < 0)
 	{
@@ -181,169 +161,56 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if(fork_pid1 == 0)
+	else if(fork_pid1 == 0)
 	{
-		//安装信号
-		install_signal();
-		sleep(4);
-		printf("Child process One: Read value as %d\n", data->value);
-		data->value *= 2;
-		printf("Child process One: Doubled value is %d\n", data->value);
-
 		printf("Procession One PID: %d\n",getpid());
+		signal(SIGUSR1, sigusr1_handler);
+		signal(SIGUSR2, sigusr2_handler);
 
 		while(1)
 		{
+			sleep(1);
 
-			//检测串口打开，SIM卡在不在，有没有注册网络，
-			if(check_sim_all(comport_tty_ptr) < 0)
-			{
-				printf("SIM Card don't get ready\n");
-				return -2;
-			}
+		}	
+		exit(0);
+	}
 
+	else
+	{
+		printf("Process Parent PID: %d\n",getpid());
+		sleep(3);
+
+		while(1)
+		{
+			//获取SIM Card信号强度
 			if(check_sim_signal(comport_tty_ptr,&sim_signal) < 0)
 			{
 				printf("SIM Card signal instability!\n");
-				return -3;
+				return -6;
+				goto CleanUp;
 			}
 
 			dbg_print("SIM Card Signal is: %d\n",sim_signal);
 
-			//判断SIM Card信号强度 
 			if(sim_signal>7 && sim_signal<32)
 			{
 				printf("The signal is good, Start pppd dial\n");
-				kill(fork_pid2, SIGUSR1);
+				//kill(fork_pid2, SIGUSR1);
 				//system("sudo pppd call rasppp");  //进行pppd拨号上网
 			}
 			else
 			{
 				printf("The signal isn't good, Stop pppd dial\n");
-				kill(fork_pid2, SIGUSR2);
-				//system("sudo poff rasppp");      // 停止pppd拨号信号
+				//kill(fork_pid2, SIGUSR2);
+				//system("sudo poff rasppp");
 			}
-			sleep(100);
-		}	
-		tty_close(comport_tty_ptr);
-		return 0;
-	}
- 
-	else if(fork_pid1 > 0)
-	{
-		//创建子进程二
-		fork_pid2=fork();
-		if(fork_pid2 < 0)
-		{
-			printf("Creat process Two failure\n");
-			return -3;
+			sleep(10);
 		}
-		
-		if(fork_pid2 == 0)
-		{
-			//安装信号
-			install_signal();
-			printf("Process Two PID: %d\n",getpid());
-			printf("Process Tow running...\n");
-			//信号SIGUSR1和信号SIGUSR2处理函数
-			signal(SIGUSR1, sigusr1_handler);
-			signal(SIGUSR2, sigusr2_handler);
 
-			while(1)
-			{
-				sleep(1);
-			}
-			exit(0);
-		}
-	
-		else
-		{
-			data->value = 256;
-			printf("Parent process: Set value to %d\n",data->value);
-			printf("Process Parent PID: %d\n",getpid());
-			sleep(8);
-
-			while(1)
-			{
-				FD_ZERO(&rdset);//清空文件描述符集合
-				FD_SET(comport_tty_ptr->fd, &rdset);//将串口文件fd加入集合
-				FD_SET(STDIN_FILENO, &rdset);//将标准输入文件fd加入集合
-				//select多路复用非阻塞监听文件描述符
-				rv_fd = select(comport_tty_ptr->fd + 1, &rdset, NULL, NULL, NULL);
-				if(rv_fd < 0)
-				{
-					printf("Select listening for file descriptor error: %s\n",strerror(errno));
-					rv = -6;
-					goto CleanUp;
-				}
-				else if(rv_fd == 0)
-				{
-					printf("Select listening for file descriptor timeout!\n");
-					rv = -7;
-					goto CleanUp;
-				}
-				else
-				{
-					if(FD_ISSET(STDIN_FILENO, &rdset))//判断是否是标准输入响应
-					{
-						memset(send_buf, 0, sizeof(send_buf));//清空buffer
-
-						fgets(send_buf, sizeof(send_buf), stdin);
-						i = strlen(send_buf);
-						strcpy(&send_buf[i-1], "\r");//发送AT指令时，需要在指令后面加上\r
-						if(tty_send(comport_tty_ptr, send_buf, strlen(send_buf)) < 0)
-						{
-							printf("Failed to send data through the serial port\n");
-							rv = -8;
-							goto CleanUp;
-						}
-						dbg_print("Send data:%s\n", send_buf);
-						fflush(stdin);//冲洗输入流
-					}
-					else if(FD_ISSET(comport_tty_ptr->fd, &rdset))//判断是否是串口文件描述符响应
-					{
-						memset(recv_buf, 0, sizeof(recv_buf));
-						//读串口发来的信息
-						if(tty_recv(comport_tty_ptr, recv_buf, sizeof(recv_buf), TIMEOUT) < 0)
-						{
-							printf("Failed to receive serial port data!\n");
-							rv = -9;
-							goto CleanUp;
-						}
-						printf("Receiving port data:%s\n", recv_buf);
-						fflush(stdout);//冲洗输出流
-					}
-				}
-			}
-		}
 	}
-/*
-  // 如果父进程接收到退出信号（例如SIGINT），则向子进程一和子进程二发送SIGTERM信号
-	if (SIGINT) 
-	{
-		kill(fork_pid1,SIGTERM);
-		kill(fork_pid2,SIGTERM);
-	}
-*/
-
-	kill(fork_pid1,SIGKILL);  //结束进程一运行
-	kill(fork_pid2,SIGKILL);
 
 
-    // 解除共享内存的映射
-    if (shmdt(data) == -1) 
-	{
-        printf("shmdt\n");
-        exit(1);
-    }
-
-    // 删除共享内存
-    if (shmctl(shmid, IPC_RMID, 0) == -1) 
-	{
-        printf("shmctl\n");
-        exit(1);
-    }
-    return 0;
+	return 0;
 CleanUp: 
     tty_close(comport_tty_ptr);
     return rv;
@@ -375,68 +242,23 @@ void sigusr2_handler(int signum)
 {
     printf("Received SIGUSR2. Stopping pppd...\n");
     system("sudo poff rasppp");
-    exit(0);
 }
 
-//注册一个SIGUSR1和SIGUSR2空信号，确保父进程接收到这两个信号不做出反应
-void sigusr_parent(int sig) 
+//注册进程结束信号，当父进程结束运行时结束子进程一的运行
+void exit_handler() 
 {
-	    // 空函数，什么都不做
+	if(fork_pid1 > 0)
+	{
+		// 发送SIGKILL信号给子进程一
+		kill(fork_pid1, SIGKILL);
+	}
+	exit(0);
 }
 
 
-//对信号进行处理
-void handler(int sig)
+//安装信号
+void sig_handle(int signum)
 {
-    switch(sig)
-    {
-        case SIGINT:
-        {
-            printf("Process captured SIGINT signal!\n");
-            g_stop = 1;
-            break;
-        }
-        case SIGTERM:
-        {
-            printf("Process captured SIGTERM signal!\n");
-            g_stop = 1;
-            break;
-        }
-        case SIGSEGV:
-        {
-            printf("Process captured SIGSEGV signal!\n");
-            g_stop = 1;
-            exit(0);
-            break;
-        }
-        case SIGPIPE:
-        {
-            printf("Process captured SIGPIPE signal!\n");
-            g_stop = 1;
-            break;
-        }
-        default:
-            break;
-    }
-
-    return ;
+    printf("catch signal [%d]\n",signum);
+    g_stop = 1;
 }
-
-//注册信号
-void install_signal(void)
-{
-    struct sigaction sigact;
-
-    sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags = 0;
-    sigact.sa_handler = handler;
-
-    sigaction(SIGINT,  &sigact, 0);
-    sigaction(SIGTERM, &sigact, 0);
-    sigaction(SIGPIPE, &sigact, 0);
-    sigaction(SIGSEGV, &sigact, 0);
-
-    return ;
-}
-
-
