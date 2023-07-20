@@ -49,6 +49,7 @@ void install_signal(void);
 void handler(int sig);
 void sigusr1_handler(int signum);
 void sigusr2_handler(int signum);
+void sigusr_parent(int sig); 
 
 typedef struct 
 {
@@ -152,6 +153,9 @@ int main(int argc, char *argv[])
 
 	//安装信号
 	install_signal();
+	//父进程收到USR1和USR2信号不处理
+	signal(SIGUSR1, sigusr_parent);
+	signal(SIGUSR2, sigusr_parent);
 
 	//打开串口
 	if(tty_open(comport_tty_ptr) < 0)
@@ -181,6 +185,7 @@ int main(int argc, char *argv[])
 	{
 		//安装信号
 		install_signal();
+		sleep(4);
 		printf("Child process One: Read value as %d\n", data->value);
 		data->value *= 2;
 		printf("Child process One: Doubled value is %d\n", data->value);
@@ -190,6 +195,7 @@ int main(int argc, char *argv[])
 		while(1)
 		{
 
+			//检测串口打开，SIM卡在不在，有没有注册网络，
 			if(check_sim_all(comport_tty_ptr) < 0)
 			{
 				printf("SIM Card don't get ready\n");
@@ -208,13 +214,13 @@ int main(int argc, char *argv[])
 			if(sim_signal>7 && sim_signal<32)
 			{
 				printf("The signal is good, Start pppd dial\n");
-				//kill(getppid(), SIGUSR1);
+				kill(fork_pid2, SIGUSR1);
 				//system("sudo pppd call rasppp");  //进行pppd拨号上网
 			}
 			else
 			{
 				printf("The signal isn't good, Stop pppd dial\n");
-				kill(getppid(), SIGUSR2);
+				kill(fork_pid2, SIGUSR2);
 				//system("sudo poff rasppp");      // 停止pppd拨号信号
 			}
 			sleep(100);
@@ -237,7 +243,6 @@ int main(int argc, char *argv[])
 		{
 			//安装信号
 			install_signal();
-			sleep(1);
 			printf("Process Two PID: %d\n",getpid());
 			printf("Process Tow running...\n");
 			//信号SIGUSR1和信号SIGUSR2处理函数
@@ -256,7 +261,7 @@ int main(int argc, char *argv[])
 			data->value = 256;
 			printf("Parent process: Set value to %d\n",data->value);
 			printf("Process Parent PID: %d\n",getpid());
-			sleep(3);
+			sleep(8);
 
 			while(1)
 			{
@@ -322,9 +327,7 @@ int main(int argc, char *argv[])
 */
 
 	kill(fork_pid1,SIGKILL);  //结束进程一运行
-	waitpid(fork_pid1, NULL, 0);
 	kill(fork_pid2,SIGKILL);
-	waitpid(fork_pid2, NULL, 0);
 
 
     // 解除共享内存的映射
@@ -373,6 +376,12 @@ void sigusr2_handler(int signum)
     printf("Received SIGUSR2. Stopping pppd...\n");
     system("sudo poff rasppp");
     exit(0);
+}
+
+//注册一个SIGUSR1和SIGUSR2空信号，确保父进程接收到这两个信号不做出反应
+void sigusr_parent(int sig) 
+{
+	    // 空函数，什么都不做
 }
 
 
