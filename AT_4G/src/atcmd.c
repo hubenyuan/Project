@@ -288,7 +288,7 @@ int check_sim_signal(comport_tty_t *comport_tty,int *sim_signal)
 }
 //检测所有发送的指令，若全部满足返回0，否则返回-1，-2···
 
-int check_sim_all(comport_tty_t *comport_tty)
+int check_sim_all(comport_tty_t *comport_tty,int *sim_signal)
 {
 	//发送指令为AT,期望收到OK，检测串口能否通信
     if(check_sim_ready(comport_tty) < 0)
@@ -310,13 +310,13 @@ int check_sim_all(comport_tty_t *comport_tty)
 		printf("SIM card has no regsiter!\n");
 		return -3;
 	}
-/*
+
 	//发送指令为AT+CSQ,期望收到0~31,99。  0~31为信号强度，若信号强度为99则表示无信号，第二位通常为99
 	if(check_sim_signal(comport_tty,sim_signal) < 0)
 	{
 		printf("The SIM card has no signal!\n");
 		return -4;
 	}
-*/
+
 }
 
