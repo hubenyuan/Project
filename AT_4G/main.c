@@ -24,6 +24,9 @@
 #include <time.h>
 #include <getopt.h>
 #include <signal.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include "comport.h"
 #include "atcmd.h"
@@ -36,17 +39,24 @@
 #define dbg_print(format, args...) do {} while(0)
 #endif
 
+#define RED_FONT    "\033[1;31m"
+#define GREEN_FONT  "\033[1;32m"
+#define DEFAULT_FONT    "\033[0m"
+
 #define    TIMEOUT  2
 
-int g_stop = 0;
-pid_t  fork_pid1;
+int  g_stop = 0;
+int *p_sign = 0;
+pid_t  fork_pid1,pid;
 
 void print_usage(char *program_name);
-void sig_handle(int signum);
+
+void install_signal(void);
+void handler(int sig);
+
 void sigusr1_handler(int signum);
 void sigusr2_handler(int signum);
 void exit_handler();
-
 
 int main(int argc, char *argv[])
 {
@@ -60,10 +70,14 @@ int main(int argc, char *argv[])
     char            send_buf[128];
     char            recv_buf[128];
 	int             sim_signal;
+    void           *shmaddr;
     fd_set          rdset;
     comport_tty_t   comport_tty;
     comport_tty_t  *comport_tty_ptr;
     comport_tty_ptr = &comport_tty;
+	const char *netPath = "/sys/class/net/ppp0";
+	const char* command = "nohup ping baidu.com -I ppp0 -c 4 &";
+	struct stat    st;
 
     struct option opts[] = {
         {"baudrate", required_argument, NULL, 'b'},
@@ -125,8 +139,7 @@ int main(int argc, char *argv[])
 	}
 	
 	//注册信号
-	signal(SIGINT,sig_handle);
-	signal(SIGTERM,sig_handle);
+	install_signal();
 	signal(SIGINT,exit_handler);
 
 	//打开串口
@@ -145,13 +158,31 @@ int main(int argc, char *argv[])
 		goto CleanUp;
 	}
 
-	//检测串口是否打开，SIM卡在不在，有没有注册网络，
-	if(check_sim_all(comport_tty_ptr) < 0)
+	//检测串口是否打开，SIM卡在不在，有没有注册网络，信号行不行
+	if(check_sim_all(comport_tty_ptr,&sim_signal) < 0)
 	{
 		printf("SIM Card don't get ready\n");
 		return -5;
 		goto CleanUp;
 	}
+
+    // 创建共享内存段
+    shmid = shmget(IPC_PRIVATE, 128, IPC_CREAT | 0666);
+    if (shmid < 0) 
+	{
+        perror("shmget");
+        exit(1);
+    }
+
+    // 连接共享内存
+    shmaddr = shmat(shmid, NULL, 0);
+    if (shmaddr == (void *)-1) 
+	{
+        perror("shmat");
+        exit(1);
+    }
+
+	p_sign = (int *)shmaddr;
 
     //创建子进程
 	fork_pid1 = fork();
@@ -166,6 +197,7 @@ int main(int argc, char *argv[])
 		printf("Procession One PID: %d\n",getpid());
 		signal(SIGUSR1, sigusr1_handler);
 		signal(SIGUSR2, sigusr2_handler);
+		printf("Listening SIGUSR1 and SIGUSR2 Signal!\n");
 
 		while(1)
 		{
@@ -180,37 +212,81 @@ int main(int argc, char *argv[])
 		printf("Process Parent PID: %d\n",getpid());
 		sleep(3);
 
-		while(1)
+		while(!g_stop)
 		{
-			//获取SIM Card信号强度
-			if(check_sim_signal(comport_tty_ptr,&sim_signal) < 0)
+			if(! *p_sign)
 			{
-				printf("SIM Card signal instability!\n");
-				return -6;
-				goto CleanUp;
+				//判断是否存在ppp0网络,stat等于0表示存在
+				if(stat(netPath, &st) == 0)
+				{
+					printf("ppp0 network interface exists.\n");
+					//检测ppp0能不能ping通
+					int status = system(command);
+					if(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+					{
+						printf("ppp0 network is good, No data loss\n");
+					}
+
+					else
+					{
+						printf("ppp0 network is poor, closs ppp0");
+						system("sudo poff rasppp"); //停止pppd拨号上网
+					}
+				}
+				
+				else
+				{
+					printf("ppp0 network interface does not exist.\n");
+					//获取SIM Card信号强度
+					if(check_sim_signal(comport_tty_ptr,&sim_signal) < 0)
+					{
+						printf("SIM Card signal instability!\n");
+						goto CleanUp;
+					}
+
+					dbg_print("SIM Card Signal is: %d\n",sim_signal);
+
+					//SIM Card 信号在8~31是正常的状态,数值越高信号越好
+					if(sim_signal>7 && sim_signal<32)
+					{
+						printf("%sThe signal is good, Start pppd dial%s\n",GREEN_FONT,DEFAULT_FONT);
+	                    system("nohup sudo pppd call rasppp &");    //开始pppd拨号上网
+					}
+					else
+					{
+						printf("The signal isn't good, Can't pppd dial\n"); //不能pppd拨号上网
+					}
+				}
+
 			}
 
-			dbg_print("SIM Card Signal is: %d\n",sim_signal);
-
-			if(sim_signal>7 && sim_signal<32)
-			{
-				printf("The signal is good, Start pppd dial\n");
-				//kill(fork_pid2, SIGUSR1);
-				//system("sudo pppd call rasppp");  //进行pppd拨号上网
-			}
 			else
 			{
-				printf("The signal isn't good, Stop pppd dial\n");
-				//kill(fork_pid2, SIGUSR2);
-				//system("sudo poff rasppp");
+				printf("%sWaiting USR1 signal arrval%s\n",RED_FONT,DEFAULT_FONT);
 			}
-			sleep(10);
+
+			sleep(5);
 		}
 
+        // 分离共享内存
+        if (shmdt(p_sign) == -1) 
+		{
+            perror("shmdt");
+            exit(1);
+        }
+
+        // 删除共享内存
+        if (shmctl(shmid, IPC_RMID, 0) == -1) 
+		{
+            perror("shmctl");
+            exit(1);
+        }
+
+		wait(NULL);  // 等待子进程结束
+		
+		return 0;
 	}
 
-
-	return 0;
 CleanUp: 
     tty_close(comport_tty_ptr);
     return rv;
@@ -226,7 +302,7 @@ void print_usage(char *program_name)
     printf("-s[stopbits]:Select stop bit, for example 1 and 2.\n");
     printf("-m[serial_name]:Select device file, for example /dev/ttyUSB0.\n");
     printf("-h[help]:Printing Help Information.\n"); 
-    printf("For example:./SMS -b 115200 -p n -s 1 -m /dev/ttyUSB3 \n\n");
+    printf("For example:./ppp-4G -b 115200 -p n -s 1 -m /dev/ttyUSB3. \n");
 
 }
 
@@ -235,14 +311,16 @@ void print_usage(char *program_name)
 void sigusr1_handler(int signum)
 {
     printf("Received SIGUSR1. Starting pppd...\n");
-    system("sudo pppd call rasppp");
+	*p_sign = 0;
 }
 
 void sigusr2_handler(int signum)
 {
     printf("Received SIGUSR2. Stopping pppd...\n");
-    system("sudo poff rasppp");
+	system("sudo poff rasppp"); //停止pppd拨号
+	*p_sign = 1;
 }
+
 
 //注册进程结束信号，当父进程结束运行时结束子进程一的运行
 void exit_handler() 
@@ -256,9 +334,68 @@ void exit_handler()
 }
 
 
-//安装信号
-void sig_handle(int signum)
+void handler(int sig)
 {
-    printf("catch signal [%d]\n",signum);
-    g_stop = 1;
+    switch(sig)
+    {
+        case SIGINT:
+        {
+            printf("Process captured SIGINT signal!\n");
+            g_stop = 1;
+            break;
+        }
+        case SIGTERM:
+        {
+            printf("Process captured SIGTERM signal!\n");
+            g_stop = 1;
+            break;
+        }
+        case SIGSEGV:
+        {
+            printf("Process captured SIGSEGV signal!\n");
+            g_stop = 1;
+            exit(0);
+            break;
+        }
+        case SIGPIPE:
+        {
+            printf("Process captured SIGPIPE signal!\n");
+            g_stop = 1;
+            break;
+        }
+		case SIGUSR1:
+		{
+		     printf("Process captured SIGUSR1 signal!\n");
+			 break;
+		}
+		case SIGUSR2:
+		{
+			printf("Process captured SIGUSR2 signal!\n");
+			break;
+		}
+        default:
+            break;
+    }
+
+    return ;
 }
+
+void install_signal(void)
+{
+    struct sigaction sigact;
+
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = handler;
+
+    sigaction(SIGINT, &sigact, 0);
+    sigaction(SIGTERM, &sigact, 0);
+    sigaction(SIGPIPE, &sigact, 0);
+    sigaction(SIGSEGV, &sigact, 0);
+    sigaction(SIGUSR1, &sigact, 0);
+    sigaction(SIGUSR2, &sigact, 0);
+
+    return ;
+}
+
+
