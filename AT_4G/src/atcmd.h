@@ -46,7 +46,7 @@ int check_sim_cgsn(comport_tty_t *comport_tty);
 
 int check_sim_ati(comport_tty_t *comport_tty);
 
-int check_sim_all(comport_tty_t *comport_tty);
+int check_sim_all(comport_tty_t *comport_tty,int *sim_signal);
 
 
 #endif   /* ----- #ifndef _ATCMD_H_  ----- */
