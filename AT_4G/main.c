@@ -60,18 +60,12 @@ void exit_handler();
 
 int main(int argc, char *argv[])
 {
-    
-    int             i;
-	int             shmid;
+    int             shmid;
     int             ch;
     int             rv = - 1;
-    int             rv_fd = -1;
-	int             serial_fd;
-    char            send_buf[128];
-    char            recv_buf[128];
 	int             sim_signal;
     void           *shmaddr;
-    fd_set          rdset;
+	char            apn[256];
     comport_tty_t   comport_tty;
     comport_tty_t  *comport_tty_ptr;
     comport_tty_ptr = &comport_tty;
@@ -166,6 +160,14 @@ int main(int argc, char *argv[])
 		goto CleanUp;
 	}
 
+	/*
+	if(check_sim_apn(comport_tty_ptr,apn) < 0)
+	{
+		printf("Can't gain APN");
+		return -6;
+	}
+	*/
+
     // 创建共享内存段
     shmid = shmget(IPC_PRIVATE, 128, IPC_CREAT | 0666);
     if (shmid < 0) 
@@ -241,7 +243,6 @@ int main(int argc, char *argv[])
 					if(check_sim_signal(comport_tty_ptr,&sim_signal) < 0)
 					{
 						printf("SIM Card signal instability!\n");
-						goto CleanUp;
 					}
 
 					dbg_print("SIM Card Signal is: %d\n",sim_signal);
