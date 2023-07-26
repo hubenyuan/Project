@@ -216,8 +216,7 @@ int check_sim_exist(comport_tty_t *comport_tty)
 //发送指令为AT+CREG?,期望收到0,1或者0,3.检测SIM卡是否注册上了。
 int check_sim_register(comport_tty_t *comport_tty)
 {
-    int             rv1 = 0;
-	int             rv2 = 0;
+    int             rv = 0;
 
     if(!comport_tty)
     {
@@ -225,10 +224,9 @@ int check_sim_register(comport_tty_t *comport_tty)
         return -1;
     }
 
-    rv1 = send_recv_atcmd(comport_tty,"AT+CREG?\r","0,1",NULL,0,2);
-    rv2 = send_recv_atcmd(comport_tty,"AT+CREG?\r","0,3",NULL,0,2);
+    rv = send_recv_atcmd(comport_tty,"AT+CREG?\r","0,1",NULL,0,2);
 
-    if(rv1 && rv2) 
+    if(rv < 0) 
     {
         printf("SIM Card is not regsiter\n");
         return -2;
@@ -286,8 +284,40 @@ int check_sim_signal(comport_tty_t *comport_tty,int *sim_signal)
 
     return 0;
 }
-//检测所有发送的指令，若全部满足返回0，否则返回-1，-2···
 
+//发送指令AT+COPS? 获取运营商信息和APN
+int check_sim_apn(comport_tty_t *comport_tty,char *apn)
+{
+	int     i  = 0;
+	int     j  = 0;
+	int     rv = 0;
+	char    msg[128] = {0};
+	char   *useless;
+
+	if(!comport_tty)
+	{
+		printf("[%s] Invalid input arguments\n",__func__);
+		return -1;
+	}
+
+
+	rv = send_recv_atcmd(comport_tty,"AT+COPS?\r","+COPS",msg,sizeof(msg),2);
+
+	if(rv < 0)
+	{
+		printf("Send AT+COPS? But failiure\n");
+		return -2;
+	}
+
+	useless = strtok(msg,"\"");
+	apn = strtok(NULL,"\"");
+
+	printf("APN= %s\n",apn);
+
+}
+
+
+//检测所有发送的指令，若全部满足返回0，否则返回-1，-2···
 int check_sim_all(comport_tty_t *comport_tty,int *sim_signal)
 {
 	//发送指令为AT,期望收到OK，检测串口能否通信
