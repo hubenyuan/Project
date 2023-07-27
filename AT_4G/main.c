@@ -27,6 +27,7 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <gpiod.h>
 
 #include "comport.h"
 #include "atcmd.h"
@@ -43,6 +44,11 @@
 #define GREEN_FONT  "\033[1;32m"
 #define DEFAULT_FONT    "\033[0m"
 
+#define GPRS_CFG0_PIN       "PD15"
+#define GPRS_CFG1_PIN       "PD17"
+#define GPRS_PWREN_PIN      "PA31"
+
+
 #define    TIMEOUT  2
 
 int  g_stop = 0;
@@ -58,10 +64,14 @@ void sigusr1_handler(int signum);
 void sigusr2_handler(int signum);
 void exit_handler();
 
+int gprs_check_present(void);
+int gprs_turn_power(int status);
+
 int main(int argc, char *argv[])
 {
     int             shmid;
     int             ch;
+	int             p_status;
     int             rv = - 1;
 	int             sim_signal;
     void           *shmaddr;
@@ -70,7 +80,7 @@ int main(int argc, char *argv[])
     comport_tty_t  *comport_tty_ptr;
     comport_tty_ptr = &comport_tty;
 	const char *netPath = "/sys/class/net/ppp0";
-	const char* command = "nohup ping baidu.com -I ppp0 -c 4 &";
+	const char *command = "nohup ping baidu.com -I ppp0 -c 4 &";
 	struct stat    st;
 
     struct option opts[] = {
@@ -135,6 +145,21 @@ int main(int argc, char *argv[])
 	//注册信号
 	install_signal();
 	signal(SIGINT,exit_handler);
+
+	//检查4G模块是否存在
+	gprs_check_present();
+	if(status == 0x3)
+	{
+		printf("Inexistence 4G module!\n");
+		return -3;
+	}
+
+	//给4G模块上电
+	if(gprs_turn_power(&status) < 0)
+	{
+		printf("The module fails to be powered on\n");
+		return -4;
+	}
 
 	//打开串口
 	if(tty_open(comport_tty_ptr) < 0)
@@ -223,8 +248,8 @@ int main(int argc, char *argv[])
 				{
 					printf("ppp0 network interface exists.\n");
 					//检测ppp0能不能ping通
-					int status = system(command);
-					if(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+					p_status = system(command);
+					if(WIFEXITED(p_status) && WEXITSTATUS(p_status) == 0)
 					{
 						printf("ppp0 network is good, No data loss\n");
 					}
@@ -250,7 +275,7 @@ int main(int argc, char *argv[])
 					//SIM Card 信号在8~31是正常的状态,数值越高信号越好
 					if(sim_signal>7 && sim_signal<32)
 					{
-						printf("%sThe signal is good, Start pppd dial%s\n",GREEN_FONT,DEFAULT_FONT);
+						printf("--The signal is good, Start pppd dial--\n");
 	                    system("nohup sudo pppd call rasppp &");    //开始pppd拨号上网
 					}
 					else
@@ -263,7 +288,7 @@ int main(int argc, char *argv[])
 
 			else
 			{
-				printf("%sWaiting USR1 signal arrval%s\n",RED_FONT,DEFAULT_FONT);
+				printf("--Waiting USR1 signal arrval--\n");
 			}
 
 			sleep(5);
@@ -399,4 +424,34 @@ void install_signal(void)
     return ;
 }
 
+/*  check 4G module present or not */
+int gprs_check_present(void)
+{
+    int       status = 0x3; /* 00:4G 01/10:Reserved 11:NoCard */
+    char      bit[2];
 
+    if( (bit[0]=at91_gpio_get(GPRS_CFG0_PIN)) < 0)
+    {
+        goto out;
+    }
+
+    if( (bit[1]=at91_gpio_get(GPRS_CFG1_PIN)) < 0)
+    {
+        goto out;
+    }
+
+    status = bit[1]<<1 | bit[0];
+
+out:
+    return status;
+}
+                  
+                  
+/*  Turn 4G module power stauts: ON or OFF  */
+int gprs_turn_power(int status)
+{
+    if( status )
+        return at91_gpio_set(GPRS_PWREN_PIN, LOWLEVEL);
+    else
+        return at91_gpio_set(GPRS_PWREN_PIN, HIGHLEVEL);
+}
