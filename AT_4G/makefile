@@ -16,11 +16,10 @@ LDFLAGS+=-L${LIBPATH2}
 LDFLAGS+=-l${LIBPATH3}
 LDFLAGS+=-l${LIBPATH4}
 
-CC = arm-linux-gnueabihf-gcc
-AR = ar
+CC = /opt/buildroot/gcc-5.5-arm926t-2019.02/bin/arm-linux-gcc
 
 all:
-	${CC} main.c -o ${APPNAME} ${CFLAGS} ${LDFLAGS} -static
+	${CC} main.c -o ${APPNAME} ${CFLAGS} ${LDFLAGS} -lgpiod
 
 clean:
 	rm -f ${APPNAME}
