@@ -28,9 +28,12 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <gpiod.h>
+#include <pthread.h>
 
 #include "comport.h"
 #include "atcmd.h"
+#include "network.h"
+#include "gpio_l.h"
 
 #define CONFIG_DEBUG
 
@@ -51,9 +54,13 @@
 
 #define    TIMEOUT  2
 
-int  g_stop = 0;
-int *p_sign = 0;
-pid_t  fork_pid1,pid;
+int   g_stop = 0;
+int   led_sign = 0;
+int   led_symbol = 0;
+int   p_sign = 0;
+int   ptd_sign = 0;
+
+gpiod_led_t  gpiod_led;
 
 void print_usage(char *program_name);
 
@@ -62,10 +69,11 @@ void handler(int sig);
 
 void sigusr1_handler(int signum);
 void sigusr2_handler(int signum);
-void exit_handler();
 
-int gprs_check_present(void);
-int gprs_turn_power(int status);
+void *thread_worker1(void *args);
+void *thread_worker2(void *args);
+void *thread_worker3(void *args);
+
 
 int main(int argc, char *argv[])
 {
@@ -74,14 +82,17 @@ int main(int argc, char *argv[])
 	int             p_status;
     int             rv = - 1;
 	int             sim_signal;
+	int             jud_net;
     void           *shmaddr;
 	char            apn[256];
+	pthread_t       tid;
+	pthread_attr_t  thread_attr;
     comport_tty_t   comport_tty;
     comport_tty_t  *comport_tty_ptr;
     comport_tty_ptr = &comport_tty;
 	const char *netPath = "/sys/class/net/ppp0";
-	const char *command = "nohup ping baidu.com -I ppp0 -c 4 &";
 	struct stat    st;
+
 
     struct option opts[] = {
         {"baudrate", required_argument, NULL, 'b'},
@@ -144,27 +155,18 @@ int main(int argc, char *argv[])
 	
 	//注册信号
 	install_signal();
-	signal(SIGINT,exit_handler);
-
-	//检查4G模块是否存在
-	gprs_check_present();
-	if(status == 0x3)
-	{
-		printf("Inexistence 4G module!\n");
-		return -3;
-	}
-
-	//给4G模块上电
-	if(gprs_turn_power(&status) < 0)
-	{
-		printf("The module fails to be powered on\n");
-		return -4;
-	}
+	signal(SIGUSR2, sigusr2_handler);
+	signal(SIGUSR1, sigusr1_handler);
+	
+	//初始化GPIO
+	gpio_init(&gpiod_led);
+	//点亮灯
+	led_bright(&gpiod_led);
 
 	//打开串口
 	if(tty_open(comport_tty_ptr) < 0)
 	{
-		printf("Failed to open the device file");
+		printf("Failed to open the device file\n");
 		return -3;
 		goto CleanUp;
 	}
@@ -192,129 +194,115 @@ int main(int argc, char *argv[])
 		return -6;
 	}
 	*/
-
-    // 创建共享内存段
-    shmid = shmget(IPC_PRIVATE, 128, IPC_CREAT | 0666);
-    if (shmid < 0) 
+	printf("Process PID: %d\n",getpid());
+    
+	if( pthread_attr_init(&thread_attr) )
 	{
-        perror("shmget");
-        exit(1);
-    }
-
-    // 连接共享内存
-    shmaddr = shmat(shmid, NULL, 0);
-    if (shmaddr == (void *)-1) 
-	{
-        perror("shmat");
-        exit(1);
-    }
-
-	p_sign = (int *)shmaddr;
-
-    //创建子进程
-	fork_pid1 = fork();
-	if(fork_pid1 < 0)
-	{
-		printf("Creat process ONE failure\n");
-		return -1;
+			printf("pthread_attr_init() failure: %s\n", strerror(errno));
+			return -1;
+			goto CleanUp;
 	}
 
-	else if(fork_pid1 == 0)
+	if( pthread_attr_setstacksize(&thread_attr, 120*1024) )
 	{
-		printf("Procession One PID: %d\n",getpid());
-		signal(SIGUSR1, sigusr1_handler);
-		signal(SIGUSR2, sigusr2_handler);
-		printf("Listening SIGUSR1 and SIGUSR2 Signal!\n");
-
-		while(1)
-		{
-			sleep(1);
-
-		}	
-		exit(0);
+			printf("pthread_attr_setstacksize() failure: %s\n", strerror(errno));
+			return -1;
+			goto CleanUp; 
 	}
 
-	else
+	if( pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_DETACHED) )
 	{
-		printf("Process Parent PID: %d\n",getpid());
-		sleep(3);
+			printf("pthread_attr_setdetachstate() failure: %s\n", strerror(errno));
+			return -1;
+			goto CleanUp;
+	}
 
-		while(!g_stop)
+
+	while(!g_stop)
+	{
+		if(p_sign)
 		{
-			if(! *p_sign)
+			ptd_sign = 0;
+			//判断是否存在ppp0网络,stat等于0表示存在
+			if(stat(netPath, &st) == 0)
 			{
-				//判断是否存在ppp0网络,stat等于0表示存在
-				if(stat(netPath, &st) == 0)
+				printf("ppp0 network interface exists.\n");
+				//检测ppp0能不能ping通
+				if(jud_ppp0_net() == 1)
 				{
-					printf("ppp0 network interface exists.\n");
-					//检测ppp0能不能ping通
-					p_status = system(command);
-					if(WIFEXITED(p_status) && WEXITSTATUS(p_status) == 0)
+					if(led_sign == 1)
 					{
-						printf("ppp0 network is good, No data loss\n");
+						pthread_attr_destroy(&thread_attr);
+						pthread_create(&tid, &thread_attr, thread_worker1, &led_symbol);
+						led_sign = 0;
 					}
-
-					else
-					{
-						printf("ppp0 network is poor, closs ppp0");
-						system("sudo poff rasppp"); //停止pppd拨号上网
-					}
+					printf("ppp0 network is good, No data loss\n");
 				}
-				
+
 				else
 				{
-					printf("ppp0 network interface does not exist.\n");
-					//获取SIM Card信号强度
-					if(check_sim_signal(comport_tty_ptr,&sim_signal) < 0)
-					{
-						printf("SIM Card signal instability!\n");
-					}
-
-					dbg_print("SIM Card Signal is: %d\n",sim_signal);
-
-					//SIM Card 信号在8~31是正常的状态,数值越高信号越好
-					if(sim_signal>7 && sim_signal<32)
-					{
-						printf("--The signal is good, Start pppd dial--\n");
-	                    system("nohup sudo pppd call rasppp &");    //开始pppd拨号上网
-					}
-					else
-					{
-						printf("The signal isn't good, Can't pppd dial\n"); //不能pppd拨号上网
-					}
+					printf("ppp0 network is poor, closs ppp0");
+					led_bright(&gpiod_led);
+					system("sudo poff rasppp"); //停止pppd拨号上网
 				}
-
 			}
-
+			
 			else
 			{
-				printf("--Waiting USR1 signal arrval--\n");
+				printf("ppp0 network interface does not exist.\n");
+				//获取SIM Card信号强度
+				if(check_sim_signal(comport_tty_ptr,&sim_signal) < 0)
+				{
+					printf("SIM Card signal instability!\n");
+				}
+
+				dbg_print("SIM Card Signal is: %d\n",sim_signal);
+
+				//SIM Card 信号在8~31是正常的状态,数值越高信号越好
+				if(sim_signal>7 && sim_signal<32)
+				{
+					if(led_sign == 0)
+					{
+						pthread_attr_destroy(&thread_attr);
+						pthread_create(&tid, NULL, thread_worker2, &led_symbol);
+						led_sign = 1;
+					}
+
+					printf("--The signal is good, Start pppd dial--\n");
+					system("nohup sudo pppd call rasppp &");    //开始pppd拨号上网
+				}
+				else
+				{
+					printf("The signal isn't good, Can't pppd dial\n"); //不能pppd拨号上网
+				}
 			}
 
-			sleep(5);
 		}
 
-        // 分离共享内存
-        if (shmdt(p_sign) == -1) 
+		else
 		{
-            perror("shmdt");
-            exit(1);
-        }
+			if(!ptd_sign)
+			{
+			    pthread_attr_destroy(&thread_attr);
+			    pthread_create(&tid, NULL, thread_worker3, &led_symbol);
+				ptd_sign = 1;
+		    }
+			led_bright(&gpiod_led);
+			printf("--Waiting USR1 signal arrval--\n");
+		}
 
-        // 删除共享内存
-        if (shmctl(shmid, IPC_RMID, 0) == -1) 
-		{
-            perror("shmctl");
-            exit(1);
-        }
-
-		wait(NULL);  // 等待子进程结束
-		
-		return 0;
+		sleep(5);
 	}
+
+	pthread_join(tid, NULL);  //等待线程退出
+	led_close(&gpiod_led);
+	tty_close(comport_tty_ptr);
+
+	return 0;
 
 CleanUp: 
     tty_close(comport_tty_ptr);
+	led_close(&gpiod_led);
     return rv;
 }
 
@@ -337,26 +325,14 @@ void print_usage(char *program_name)
 void sigusr1_handler(int signum)
 {
     printf("Received SIGUSR1. Starting pppd...\n");
-	*p_sign = 0;
+	p_sign = 1;
 }
 
 void sigusr2_handler(int signum)
 {
     printf("Received SIGUSR2. Stopping pppd...\n");
 	system("sudo poff rasppp"); //停止pppd拨号
-	*p_sign = 1;
-}
-
-
-//注册进程结束信号，当父进程结束运行时结束子进程一的运行
-void exit_handler() 
-{
-	if(fork_pid1 > 0)
-	{
-		// 发送SIGKILL信号给子进程一
-		kill(fork_pid1, SIGKILL);
-	}
-	exit(0);
+	p_sign = 0;
 }
 
 
@@ -389,16 +365,6 @@ void handler(int sig)
             g_stop = 1;
             break;
         }
-		case SIGUSR1:
-		{
-		     printf("Process captured SIGUSR1 signal!\n");
-			 break;
-		}
-		case SIGUSR2:
-		{
-			printf("Process captured SIGUSR2 signal!\n");
-			break;
-		}
         default:
             break;
     }
@@ -418,40 +384,61 @@ void install_signal(void)
     sigaction(SIGTERM, &sigact, 0);
     sigaction(SIGPIPE, &sigact, 0);
     sigaction(SIGSEGV, &sigact, 0);
-    sigaction(SIGUSR1, &sigact, 0);
-    sigaction(SIGUSR2, &sigact, 0);
 
     return ;
 }
 
-/*  check 4G module present or not */
-int gprs_check_present(void)
+
+//led 慢闪
+void *thread_worker1(void *args)
 {
-    int       status = 0x3; /* 00:4G 01/10:Reserved 11:NoCard */
-    char      bit[2];
 
-    if( (bit[0]=at91_gpio_get(GPRS_CFG0_PIN)) < 0)
-    {
-        goto out;
-    }
+	int *ptr = (int *)args;
+	
+	if(args < 0)
+	{
+		printf("%s() get invalid arguments\n", __FUNCTION__);
+		pthread_exit(NULL);
+	}
+	printf("Thread workder 1 [%ld] start running...\n", pthread_self());
 
-    if( (bit[1]=at91_gpio_get(GPRS_CFG1_PIN)) < 0)
-    {
-        goto out;
-    }
+	*ptr = 1;
 
-    status = bit[1]<<1 | bit[0];
+	led_slow(&gpiod_led,ptr);
 
-out:
-    return status;
 }
-                  
-                  
-/*  Turn 4G module power stauts: ON or OFF  */
-int gprs_turn_power(int status)
+
+
+//led 快闪
+void *thread_worker2(void *args)
 {
-    if( status )
-        return at91_gpio_set(GPRS_PWREN_PIN, LOWLEVEL);
-    else
-        return at91_gpio_set(GPRS_PWREN_PIN, HIGHLEVEL);
+	int *ptr = (int *)args;
+
+	if(args < 0)
+	{
+		printf("%s() get invalid arguments\n", __FUNCTION__);
+		pthread_exit(NULL);
+	}
+	printf("Thread workder 2 [%ld] start running...\n", pthread_self());
+
+	*ptr = 0;
+
+	led_fast(&gpiod_led,ptr);
+
+}
+
+void *thread_worker3(void *args)
+{
+	int *ptr = (int *)args;
+
+	if(args < 0)
+	{
+		printf("%s() get invalid arguments\n", __FUNCTION__);
+		pthread_exit(NULL);
+	}
+
+	printf("Thread workder 3 [%ld] start running...\n", pthread_self());
+
+
+	*ptr = 2;
 }
