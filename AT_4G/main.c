@@ -34,6 +34,7 @@
 #include "atcmd.h"
 #include "network.h"
 #include "gpio_l.h"
+#include "get_apn.h"
 
 #define CONFIG_DEBUG
 
@@ -77,10 +78,12 @@ int main(int argc, char *argv[])
     int             ch;
 	int             p_status;
     int             rv = - 1;
+	int             pmnc;
+	int             pmcc;
 	int             sim_signal;
 	int             jud_net;
     void           *shmaddr;
-	char            apn[256];
+	char            papn[16]={0};
 	pthread_t       tid;
 	pthread_attr_t  thread_attr;
     comport_tty_t   comport_tty;
@@ -153,17 +156,17 @@ int main(int argc, char *argv[])
 	install_signal();
 	signal(SIGUSR2, sigusr2_handler);
 	signal(SIGUSR1, sigusr1_handler);
-	
+/* 	
 	//初始化LED的GPIO
 	gpio_init(&gpiod_led);
 	//点亮灯
 	led_bright(&gpiod_led);
-
+ 
 	//初始化模块和上电的引脚，判断模块是否存在
 	module_inin(&gpiod_led);
 	//给4G模块上电
 	pull_up(&gpiod_led);
-
+*/
 	//打开串口
 	if(tty_open(comport_tty_ptr) < 0)
 	{
@@ -188,13 +191,14 @@ int main(int argc, char *argv[])
 		goto CleanUp;
 	}
 
-	/*
-	if(check_sim_apn(comport_tty_ptr,apn) < 0)
-	{
-		printf("Can't gain APN");
-		return -6;
-	}
-	*/
+	//获取mcc和mnc
+	check_sim_cimi(comport_tty_ptr,&pmcc,&pmnc);
+	printf("mcc=%d\n",pmcc);
+	printf("mnc=%d\n",pmnc);
+
+	query_apn(FILE_NAME,&pmcc,&pmnc,papn);
+	printf("apn=%s",papn);
+
 	printf("Process PID: %d\n",getpid());
     
 	if( pthread_attr_init(&thread_attr) )
@@ -297,8 +301,8 @@ int main(int argc, char *argv[])
 
 	pthread_join(tid, NULL);  //等待线程退出
 	led_close(&gpiod_led);
-	pull_down(&gpiod_led); //关闭模块电源
-    gpio_close(&gpiod_led);
+	//pull_down(&gpiod_led); //关闭模块电源
+    //gpio_close(&gpiod_led);
 	tty_close(comport_tty_ptr);
 
 	return 0;
