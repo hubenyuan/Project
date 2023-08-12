@@ -47,10 +47,6 @@
 #define GREEN_FONT  "\033[1;32m"
 #define DEFAULT_FONT    "\033[0m"
 
-#define GPRS_CFG0_PIN       "PD15"
-#define GPRS_CFG1_PIN       "PD17"
-#define GPRS_PWREN_PIN      "PA31"
-
 
 #define    TIMEOUT  2
 
@@ -153,15 +149,20 @@ int main(int argc, char *argv[])
 		return -2;
 	}
 	
-	//注册信号
+	//注册信号,监听USR1和USR2信号
 	install_signal();
 	signal(SIGUSR2, sigusr2_handler);
 	signal(SIGUSR1, sigusr1_handler);
 	
-	//初始化GPIO
+	//初始化LED的GPIO
 	gpio_init(&gpiod_led);
 	//点亮灯
 	led_bright(&gpiod_led);
+
+	//初始化模块和上电的引脚，判断模块是否存在
+	module_inin(&gpiod_led);
+	//给4G模块上电
+	pull_up(&gpiod_led);
 
 	//打开串口
 	if(tty_open(comport_tty_ptr) < 0)
@@ -296,6 +297,8 @@ int main(int argc, char *argv[])
 
 	pthread_join(tid, NULL);  //等待线程退出
 	led_close(&gpiod_led);
+	pull_down(&gpiod_led); //关闭模块电源
+    gpio_close(&gpiod_led);
 	tty_close(comport_tty_ptr);
 
 	return 0;
@@ -303,6 +306,7 @@ int main(int argc, char *argv[])
 CleanUp: 
     tty_close(comport_tty_ptr);
 	led_close(&gpiod_led);
+	gpio_close(&gpiod_led);
     return rv;
 }
 
