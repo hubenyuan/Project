@@ -83,10 +83,13 @@ int check_sim_ready(comport_tty_t *comport_tty)
     return 0;
 }
 
-//发送指令AT+CIMI，检查SIM卡是否读卡成功，返回OK表示成功
-int check_sim_cimi(comport_tty_t *comport_tty)
+//发送指令AT+CIMI，获取SIM卡的IMSI号，解析出mmc,mcc
+int check_sim_cimi(comport_tty_t *comport_tty,int *pmcc,int *pmnc)
 {
 	int         rv = 0;
+	char        ppmcc[4]={0};
+	char        ppmnc[3]={0};
+	char        buf[32]={0};
 
 	if(!comport_tty)
 	{
@@ -94,13 +97,23 @@ int check_sim_cimi(comport_tty_t *comport_tty)
 		return -1;
 	}
 
-	rv = send_recv_atcmd(comport_tty,"AT+CIMI\r","OK",NULL,0,2);
+	rv = send_recv_atcmd(comport_tty,"AT+CIMI\r","OK",buf,sizeof(buf),2);
 
 	if(rv < 0)
 	{
 		printf("Send AT+CIMI But failure\n");
 		return -2;
 	}
+
+	printf("buf=%s\n",buf); 
+	
+	strncpy(ppmcc, buf+2, 3);
+	ppmcc[3] = '\0';
+	strncpy(ppmnc, buf+5, 2);
+	ppmnc[2] = '\0';
+
+	*pmcc = atoi(ppmcc);
+	*pmnc = atoi(ppmnc);
 
 	return 0;
 }
@@ -285,6 +298,7 @@ int check_sim_signal(comport_tty_t *comport_tty,int *sim_signal)
     return 0;
 }
 
+/* 
 //发送指令AT+COPS? 获取运营商信息和APN
 int check_sim_apn(comport_tty_t *comport_tty,char *apn)
 {
@@ -315,6 +329,7 @@ int check_sim_apn(comport_tty_t *comport_tty,char *apn)
 	printf("APN= %s\n",apn);
 
 }
+*/
 
 
 //检测所有发送的指令，若全部满足返回0，否则返回-1，-2···
