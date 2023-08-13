@@ -20,12 +20,14 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <libxml2/libxml/parser.h>
-#include <libxml2/libxml/xmlmemory.h>
-#include <libxml2/libxml/tree.h>
+#include <libxml/parser.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/xmlversion.h>
+#include <libxml/xmlstring.h>
+#include <libxml/tree.h>
 
 #define   FILE_NAME  "/home/hubenyuan/hby/test/apns-full-conf.xml"
 
-void query_apn(char *file_name,int *pmcc,int *pmnc,char *papn);
+int query_apn(char *file_name,char *pmcc,char *pmnc,char *papn);
 
 #endif 
