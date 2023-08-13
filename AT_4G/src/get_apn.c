@@ -13,17 +13,20 @@
 
 #include "get_apn.h"
 
-void query_apn(char *file_name,int *pmcc,int *pmnc,char *papn)
+int query_apn(char *file_name,char *pmcc,char *pmnc,char *papn)
 {
         xmlDocPtr       doc;        //文档指针
         xmlNodePtr      cur;        //根节点
         xmlChar         *mcc;       //移动国家代码
         xmlChar         *mnc;       //移动网络代码
         xmlChar         *apn;       //PPP拨号APN
- 
-        /*      目标mcc与mnc      */
-        char    *qmcc = (char *)pmcc;
-        char    *qmnc = (char *)pmnc;
+		/*      目标mcc与mnc      */
+        char    *qmcc;
+        char    *qmnc;
+		qmnc  =  pmnc;
+		qmcc  =  pmcc;
+
+		printf("qmcc=%s\n",qmcc);
  
         if( !file_name )
         {
@@ -63,8 +66,9 @@ void query_apn(char *file_name,int *pmcc,int *pmnc,char *papn)
                 if( xmlStrcmp(mcc, (const xmlChar *)qmcc)==0 && xmlStrcmp(mnc, (const xmlChar *)qmnc)==0 )  //若mcc和mnc是460 03同时成立，则获取该子节点APN
                 {
                     apn = xmlGetProp(cur, "apn");
-					snprintf(papn,sizeof(papn),"%s",apn);
-                    printf("mcc:%s mnc:%s apn:%s \n",mcc, mnc, apn);
+					sprintf(papn,"%s",apn);
+                    printf("mcc:%s mnc:%s apn:%s\n",mcc, mnc, papn);
+
  
                     break;
                 }
@@ -78,4 +82,3 @@ cleanup:
         }
  
 }
-
