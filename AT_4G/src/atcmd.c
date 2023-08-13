@@ -83,41 +83,69 @@ int check_sim_ready(comport_tty_t *comport_tty)
     return 0;
 }
 
-//发送指令AT+CIMI，获取SIM卡的IMSI号，解析出mmc,mcc
-int check_sim_cimi(comport_tty_t *comport_tty,int *pmcc,int *pmnc)
+//发送指令AT+QNWINFO,获取mmc,mcc
+int check_sim_mcc(comport_tty_t *comport_tty,char *pmcc,char *pmnc)
 {
-	int         rv = 0;
-	char        ppmcc[4]={0};
-	char        ppmnc[3]={0};
-	char        buf[32]={0};
+        int      rv =0;
+        char     buf[128]={0};
+    char     buff[8]={0};
+        char    *useless1;
+        char    *useless2;
+        char    *useless3;
 
-	if(!comport_tty)
-	{
-		printf("[%s] Invalid input arguments\n",__func__);
-		return -1;
-	}
+        if(!comport_tty)
+        {
+                printf("[%s] Invalid input arguments\n",__func__);
+                return -1;
+        }
 
-	rv = send_recv_atcmd(comport_tty,"AT+CIMI\r","OK",buf,sizeof(buf),2);
+        rv = send_recv_atcmd(comport_tty,"AT+QNWINFO\r","OK",buf,sizeof(buf),2);
 
-	if(rv < 0)
-	{
-		printf("Send AT+CIMI But failure\n");
-		return -2;
-	}
+        if(rv < 0)
+        {
+                printf("Send AT+QNWINFO But failure\n");
+                return -2;
+        }
 
-	printf("buf=%s\n",buf); 
-	
-	strncpy(ppmcc, buf+2, 3);
-	ppmcc[3] = '\0';
-	strncpy(ppmnc, buf+5, 2);
-	ppmnc[2] = '\0';
+        useless1 = strtok(buf,"\"");
+        useless2 = strtok(NULL,"\"");
+        useless3 = strtok(NULL,"\"");
+        strcpy(buff,strtok(NULL,"\""));
 
-	*pmcc = atoi(ppmcc);
-	*pmnc = atoi(ppmnc);
+        strncpy(pmcc, buff, 3);
+        pmcc[3] = '\0';
+        strncpy(pmnc, buff+3, 2);
+        pmnc[2] = '\0';
 
-	return 0;
+        printf("pmmc=%s\n",pmcc);
+        printf("pmnc=%s\n",pmnc);
+
+        return 0;
 }
 
+//AT命令设置APN
+int check_sim_Apn(comport_tty_t *comport_tty,char *papn)
+{
+        int         rv = 0;
+        char        buf[128]={0};
+
+        if(!comport_tty)
+        {
+                printf("[%s] Invalid input arguments\n",__func__);
+                return -1;
+        }
+
+        snprintf(buf,50,"AT+CGDCONT=1,\"IP\",\"%s\",\"0.0.0.0\",0,0\r",papn);
+
+        rv = send_recv_atcmd(comport_tty,buf,"OK",buf,sizeof(buf),2);
+
+        if(rv < 0)
+        {
+                printf("Setting APN failure!\n");
+                return -2;
+        }
+		printf("Setting APN successful\n");
+}
 
 //发送指令AT+CGATT? 回复是1表示已经连上基站
 int check_sim_cgatt(comport_tty_t *comport_tty)
