@@ -38,13 +38,14 @@ int check_sim_cgatt(comport_tty_t *comport_tty);
 
 int check_sim_signal(comport_tty_t *comport_tty,int *sim_signal);
 
-int check_sim_cimi(comport_tty_t *comport_tty,int *pmcc,int *pmnc);
+int check_sim_mcc(comport_tty_t *comport_tty,char *pmcc,char *pmnc);
 
 int check_sim_cgmi(comport_tty_t *comport_tty);
 
 int check_sim_cgsn(comport_tty_t *comport_tty);
 
 //int check_sim_apn(comport_tty_t *comport_tty,char *apn);
+int check_sim_Apn(comport_tty_t *comport_tty,char *papn);
 
 int check_sim_ati(comport_tty_t *comport_tty);
 
