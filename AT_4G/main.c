@@ -78,11 +78,11 @@ int main(int argc, char *argv[])
     int             ch;
 	int             p_status;
     int             rv = - 1;
-	int             pmnc;
-	int             pmcc;
 	int             sim_signal;
 	int             jud_net;
     void           *shmaddr;
+	char            pmnc[3]={0};
+	char            pmcc[4]={0};
 	char            papn[16]={0};
 	pthread_t       tid;
 	pthread_attr_t  thread_attr;
@@ -192,12 +192,19 @@ int main(int argc, char *argv[])
 	}
 
 	//获取mcc和mnc
-	check_sim_cimi(comport_tty_ptr,&pmcc,&pmnc);
-	printf("mcc=%d\n",pmcc);
-	printf("mnc=%d\n",pmnc);
+    check_sim_mcc(comport_tty_ptr,pmcc,pmnc);
 
-	query_apn(FILE_NAME,&pmcc,&pmnc,papn);
-	printf("apn=%s",papn);
+	//解析apns-full-conf.xml获取对应的APN
+	query_apn(FILE_NAME,pmcc,pmnc,papn);
+
+	//AT命令设置正确的APN
+    if(check_sim_Apn(comport_tty_ptr,papn) < 0)
+	{
+		printf("Setting APN errno!\n");
+		return -6;
+		goto CleanUp;
+	}
+
 
 	printf("Process PID: %d\n",getpid());
     
